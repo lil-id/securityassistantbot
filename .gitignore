@@ -131,3 +131,5 @@ dist
 
 # WhatsApp Cache
 .wwebjs_*
+
+.*env

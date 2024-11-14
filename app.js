@@ -1,5 +1,5 @@
 const qrcode = require('qrcode-terminal');
-const { Client, LocalAuth, Base } = require('whatsapp-web.js');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 const { default: ollama } = require('ollama');
 const { exec } = require("child_process");
 
@@ -24,12 +24,18 @@ client.on('qr', (qr) => {
 
 client.on('ready', async (message) => {
     const menu = `
-    *Choose what you want to check?*
-    
-    1. Running Docker Container
-    2. Exited Docker Container
+*Welcome to the main menu*.
+Please choose an option:
 
-    Type: 1 or 2?
+[ 1 ]  Cek Status Server
+[ 2 ]  Cek Akun Server
+[ 3 ]  Cek Status Kontainer
+[ 4 ]  Buat Snapshot
+[ 5 ]  Ringkasan Active Response
+[ 6 ]  Buat Umpan Balik
+[ 7 ]  Laporkan Bot
+
+_Type the menu number to select_.
     `
     const number = "+6282293675164";
     const chatId = number.substring(1) + "@c.us";
@@ -169,54 +175,54 @@ function getExitedDockerContainers() {
 }
 
 // Message Handler
-client.on('message_create', async message => {
-    switch (message.body) {
-        case "1":
-            try {
-                const containerStatus = await getRunningDockerContainers();
-                console.log("containerStatus:", JSON.stringify(containerStatus, null, 2));
+// client.on('message_create', async message => {
+//     switch (message.body) {
+//         case "1":
+//             try {
+//                 const containerStatus = await getRunningDockerContainers();
+//                 console.log("containerStatus:", JSON.stringify(containerStatus, null, 2));
                 
-                if (containerStatus.length === 0) {
-                    message.reply("No Docker containers found");
-                } else {
-                    // Format the output to be more readable
-                    message.reply("Running Docker Containers: \n");
-                    const formattedOutput = containerStatus.map(container => 
-                        `*Name*: ${container.NAMES}\n*Status*: ${container.STATUS}\n*Created*: ${container.CREATED}`
-                    ).join('\n\n');
+//                 if (containerStatus.length === 0) {
+//                     message.reply("No Docker containers found");
+//                 } else {
+//                     // Format the output to be more readable
+//                     message.reply("Running Docker Containers: \n");
+//                     const formattedOutput = containerStatus.map(container => 
+//                         `*Name*: ${container.NAMES}\n*Status*: ${container.STATUS}\n*Created*: ${container.CREATED}`
+//                     ).join('\n\n');
                     
-                    message.reply(formattedOutput);
-                }
-            } catch (error) {
-                console.error("Error getting container status:", error);
-                message.reply(`Error: ${error.message}`);
-            }
-            break;
-        case "2":
-            try {
-                const containerStatus = await getExitedDockerContainers();
-                console.log("containerStatus:", JSON.stringify(containerStatus, null, 2));
+//                     message.reply(formattedOutput);
+//                 }
+//             } catch (error) {
+//                 console.error("Error getting container status:", error);
+//                 message.reply(`Error: ${error.message}`);
+//             }
+//             break;
+//         case "2":
+//             try {
+//                 const containerStatus = await getExitedDockerContainers();
+//                 console.log("containerStatus:", JSON.stringify(containerStatus, null, 2));
                 
-                if (containerStatus.length === 0) {
-                    message.reply("No Docker containers found");
-                } else {
-                    // Format the output to be more readable
-                    message.reply("Exited Docker Containers: \n");
-                    const formattedOutput = containerStatus.map(container => 
-                        `*Name*: ${container.NAMES}\n*Status*: ${container.STATUS}\n*Created*: ${container.CREATED}`
-                    ).join('\n\n');
+//                 if (containerStatus.length === 0) {
+//                     message.reply("No Docker containers found");
+//                 } else {
+//                     // Format the output to be more readable
+//                     message.reply("Exited Docker Containers: \n");
+//                     const formattedOutput = containerStatus.map(container => 
+//                         `*Name*: ${container.NAMES}\n*Status*: ${container.STATUS}\n*Created*: ${container.CREATED}`
+//                     ).join('\n\n');
                     
-                    message.reply(formattedOutput);
-                }
-            } catch (error) {
-                console.error("Error getting container status:", error);
-                message.reply(`Error: ${error.message}`);
-            }
-            break;
-        default:
-            // Code to execute if no cases match
-            break;
-    }
-});
+//                     message.reply(formattedOutput);
+//                 }
+//             } catch (error) {
+//                 console.error("Error getting container status:", error);
+//                 message.reply(`Error: ${error.message}`);
+//             }
+//             break;
+//         default:
+//             // Code to execute if no cases match
+//             break;
+//     }
+// });
 
 client.initialize();
