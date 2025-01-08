@@ -63,7 +63,7 @@ client.on('ready', () => {
 
 // Message handler
 client.on('message_create', async (message) => {
-    const sender = message.from;
+    const sender = message.author;
     const content = message.body;
 
     // Check if it's a command (starts with !)
@@ -191,7 +191,7 @@ async function handleActiveResponse(message, args) {
 
 async function handleHelp(message, args) {
     // Available commands based on role
-    const isAdmin = message.from === process.env.ADMIN_NUMBER;
+    const isAdmin = message.author === process.env.ADMIN_NUMBER;
     let helpMessage = 'Available commands.\n\n';
     
     if (isAdmin) {
@@ -242,7 +242,7 @@ async function handleContainerStatus(message, args) {
             }
             return;
         } else {
-            message.reply('Please provide argument text.\n\nFormat:\n\n*!container active* - Get active containers \n*!container exited* - Get exited containers');
+            message.reply('Please provide argument text.\n\n*!container active* - Get active containers \n*!container exited* - Get exited containers');
             return;
         }
     } catch (error) {
@@ -254,29 +254,31 @@ async function handleContainerStatus(message, args) {
 async function handleFeedback(message, args) {
     const feedBackMessage = args.join(' ');
     const phoneNumber = `${feedBackMessage}@c.us`;
-    const isAdmin = await checkRoles(message.from) === 'admin';
+    const isAdmin = await checkRoles(message.author) === 'admin';
 
     if (isAdmin) {
         if (feedBackMessage.toLowerCase() === 'all') {
             const feedbacks = await feedBack.getFeedbacks();
             await message.reply(`All feedbacks:\n\n${feedbacks}`);
             return;
-        } else if (/^62\d{10,13}@c\.us$/.test(phoneNumber)) {
+        }
+        // TODO: fitur get !feedback by mention username whatsapp. Take the phone number of mentioned username.
+        else if (/^62\d{10,13}@c\.us$/.test(phoneNumber)) {
             const feedback = await feedBack.getFeedbackById(phoneNumber);
             await message.reply(`Feedback from ${feedBackMessage}:\n\n${feedback}`);
             return;
         } else {
-            await message.reply('Please provide argument text.\n\nFormat:\n\n*!feedback all* - Get all feedbacks \n*!feedback [userPhoneNumber]* - Get specific feedback');
+            await message.reply('Please provide argument text.\n\n*!feedback all* - Get all feedbacks \n*!feedback [userPhoneNumber]* - Get specific feedback');
             return;
         }
     }
 
     if (!feedBackMessage) {
-        await message.reply('Please provide feedback text.\nFormat: !feedback your message here');
+        await message.reply('Please provide feedback text.\n\n*!feedback* your message here');
         return;
     }
 
-    await feedBack.createFeedback(message.from, feedBackMessage);
+    await feedBack.createFeedback(message.author, feedBackMessage);
     await message.reply('Thank you for your feedback! It has been recorded.');
 }
 
@@ -289,26 +291,20 @@ async function handleReport(message, args) {
         const reports = await reportBot.getReports();
         await message.reply(`All reports:\n\n${reports}`);
         return;
-    } else if (/^62\d{10,13}@c\.us$/.test(phoneNumber)) {
+    }
+    // TODO: fitur get !report by mention username whatsapp. Take the phone number of mentioned username.
+    else if (/^62\d{10,13}@c\.us$/.test(phoneNumber)) {
         const report = await reportBot.getReportById(phoneNumber);
         await message.reply(`Report from ${reportMessage}:\n\n${report}`);
         return;
     }
-    // TODO: This is a temporary fix to allow reporting without evidence
     else if (!reportMessage) {
-        await reportBot.createReport(message.from, evidence, reportMessage);
-        await message.reply('Report received. We will investigate the issue.');
+        await message.reply('Please provide report details or provide argument text.\n\n*!report* issue description\n*!report all* - Get all reports \n*!report [userPhoneNumber]* - Get specific report');
         return;
     } else {
-        await message.reply('Please provide report details.\nFormat: !report issue description');
-        await message.reply('Please provide argument text.\n\nFormat:\n\n*!report all* - Get all feedbacks \n*!report [userPhoneNumber]* - Get specific feedback');
-        return;
+        await reportBot.createReport(message.author, evidence, reportMessage);
+        await message.reply('Report received. We will investigate the issue.');
     }
-
-    // if (!reportMessage) {
-    //     await message.reply('Please provide feedback text.\nFormat: !feedback your message here');
-    //     return;
-    // }
 }
 
 async function handleInfo(message, args) {
