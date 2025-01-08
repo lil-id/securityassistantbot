@@ -1,6 +1,6 @@
 const prisma = require('../helpers/databaseConnection');
 
-class feedBack {
+class reportBot {
     static async getUserId(userPhoneNumber) {
         const user = await prisma.users.findUnique({
             where: {
@@ -13,19 +13,20 @@ class feedBack {
         return user.id;
     }
 
-    static async createFeedback(sender, feedback) {
+    static async createReport(sender, evidence, report) {
         const userId = await this.getUserId(sender);
-        await prisma.feedbacks.create({
+        await prisma.reports.create({
             data: {
                 idUser: userId,
-                feedback: feedback,
+                evidence: evidence,
+                report: report,
             }
         });
         return;
     }
 
-    static async getFeedbacks() {
-        const feedbacks = await prisma.feedbacks.findMany({
+    static async getReports() {
+        const reports = await prisma.reports.findMany({
             include: {
                 user: {
                     select: {
@@ -36,21 +37,21 @@ class feedBack {
             }
         });
 
-        if (feedbacks.length === 0) {
-            return "No feedback available.";
+        if (reports.length === 0) {
+            return "No report available.";
         }
 
-        return feedbacks.map((feedback) => (
-            `📝 *Feedback #${feedback.id}*\n` +
-            `👤 *Name:* ${feedback.user.name}\n` +
-            `📱 *Phone:* ${feedback.user.numberPhone.replace('@c.us', '')}\n` +
-            `💬 *Message:* ${feedback.feedback}\n`
+        return reports.map((report) => (
+            `📝 *Report #${report.id}*\n` +
+            `👤 *Name:* ${report.user.name}\n` +
+            `📱 *Phone:* ${report.user.numberPhone.replace('@c.us', '')}\n` +
+            `💬 *Message:* ${report.report}\n`
         )).join('\n');
     }
 
-    static async getFeedbackById(userPhoneNumber) {
+    static async getReportById(userPhoneNumber) {
         const userId = await this.getUserId(userPhoneNumber);
-        const feedback = await prisma.feedbacks.findMany({
+        const report = await prisma.reports.findMany({
             where: { idUser: userId },
             include: {
                 user: {
@@ -62,17 +63,17 @@ class feedBack {
             }
         });
 
-        if (feedback.length === 0) {
-            return "No feedback available.";
+        if (report.length === 0) {
+            return "No report available.";
         }
         
-        return feedback.map((feedback) => (
-            `📝 *Feedback #${feedback.id}*\n` +
-            `👤 *Name:* ${feedback.user.name}\n` +
-            `📱 *Phone:* ${feedback.user.numberPhone.replace('@c.us', '')}\n` +
-            `💬 *Message:* ${feedback.feedback}\n`
+        return report.map((report) => (
+            `📝 *Report #${report.id}*\n` +
+            `👤 *Name:* ${report.user.name}\n` +
+            `📱 *Phone:* ${report.user.numberPhone.replace('@c.us', '')}\n` +
+            `💬 *Message:* ${report.report}\n`
         )).join('\n');
     }
 }
 
-module.exports = { feedBack };
+module.exports = { reportBot };

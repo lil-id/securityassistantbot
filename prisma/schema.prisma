@@ -41,6 +41,7 @@ model Reports {
   id        Int      @id @default(autoincrement())
   user      Users    @relation(fields: [idUser], references: [id])
   idUser    Int
+  evidence  String?
   report    String?
   createdAt DateTime @default(now())
 

@@ -1,11 +1,12 @@
 // Required packages
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const { exec } = require("child_process");
 const systemMonitor = require('./src/models/systemMonitor');
 const accountMonitor = require('./src/models/accountMonitor');
+const { dockerMonitor } = require('./src/models/dockerMonitor');
 const { feedBack } = require('./src/models/feedBackModel');
-const { checkRoles } = require('./src/helpers/checkRoles');
+const { reportBot } = require('./src/models/reportModel');
+const { checkRoles } = require('./src/helpers/rolesCheck');
 const prisma = require('./src/helpers/databaseConnection');
 require('dotenv').config();
 
@@ -87,7 +88,7 @@ client.on('message_create', async (message) => {
         await prisma.adminActicitylogs.create({
             data: {
                 idAdmin: adminPhoneNumber.id,
-                activity: command,
+                activity: content,
             }
         });
 
@@ -180,166 +181,12 @@ async function handleAccountMonitorCommand(message, args) {
     }
 }
 
-// Check container status command handler
-async function handleContainerStatus(message, args) {
-    try {
-        const containerRunningStatus = await getRunningDockerContainers();
-        const containerExitedStatus = await getExitedDockerContainers();
-        // console.log("containerRunningStatus:", JSON.stringify(containerRunningStatus, null, 2));
-                
-        if (containerRunningStatus.length === 0) {
-            message.reply("No Docker containers found");
-        } else {
-            // Format the output to be more readable
-            const formattedRunningStatusOutput = containerRunningStatus.map(container => 
-            `*Name*: ${container.NAMES}\n*Status*: ${container.STATUS}\n*Created*: ${container.CREATED}`
-            ).join('\n\n');                    
-            message.reply(`⚡ *Active Containers* ⚡\n\n` + formattedRunningStatusOutput);
-
-            const formattedExitedStatusOutput = containerExitedStatus.map(container => 
-            `*Name*: ${container.NAMES}\n*Status*: ${container.STATUS}\n*Created*: ${container.CREATED}`
-            ).join('\n\n');
-            message.reply(`🚨 *Exited Containers* 🚨\n\n` + formattedExitedStatusOutput); 
-        }
-    } catch (error) {
-        console.error("Error getting container status:", error);
-        message.reply(`Error: ${error.message}`);
-    }
-    // await message.reply('Containers:\nRunning: 25\nStopped: 2\nTotal: 27');
-}
-
 async function handleSnapshot(message, args) {
     await message.reply('Creating system snapshot...\nSnapshot ID: SNAP-001');
 }
 
 async function handleActiveResponse(message, args) {
     await message.reply('Active Response Summary:\nAlerts: 12\nResolved: 8\nPending: 4');
-}
-
-// Parse Docker PS Output Function
-async function parseDockerPsOutput(stdout) {
-    console.log('Raw stdout:', stdout);
-    
-    if (!stdout || stdout.trim() === '') {
-        console.log('No output from docker ps command');
-        return [];
-    }
-
-    const lines = stdout.trim().split('\n');
-    
-    if (lines.length < 2) {
-        console.log('No containers found (only header line or less)');
-        return [];
-    }
-
-    try {
-        // First line contains headers
-        const headerLine = lines[0];
-        
-        // Find the starting index of each header based on their position in the header line
-        const headerPositions = [];
-        const headers = [];
-        let headerPattern = /\s{2,}/g;
-        let match;
-        let lastIndex = 0;
-        
-        // Split headers and get their positions
-        headerLine.split(headerPattern).forEach(header => {
-            const position = headerLine.indexOf(header, lastIndex);
-            if (position !== -1) {
-                headerPositions.push(position);
-                headers.push(header.trim());
-                lastIndex = position + header.length;
-            }
-        });
-        
-        console.log('Headers:', headers);
-        console.log('Header positions:', headerPositions);
-
-        // Process each line using the header positions
-        const data = lines.slice(1).map(line => {
-            let container = {};
-            
-            // Use header positions to slice the line correctly
-            for (let i = 0; i < headers.length; i++) {
-                const start = headerPositions[i];
-                const end = headerPositions[i + 1] || line.length;
-                const value = line.substring(start, end).trim();
-                container[headers[i]] = value;
-            }
-
-            console.log('Processed container:', container);
-            return container;
-        });
-
-        // Filter to only include desired headers if needed
-        const desiredHeaders = ['NAMES', 'STATUS', 'CREATED'];
-        const filteredData = data.map(container => {
-            const filteredContainer = {};
-            desiredHeaders.forEach(header => {
-                if (container.hasOwnProperty(header)) {
-                    filteredContainer[header] = container[header];
-                }
-            });
-            return filteredContainer;
-        });
-
-        return filteredData;
-    } catch (error) {
-        console.error('Error parsing docker ps output:', error);
-        throw error;
-    }
-}
-
-// Get Docker Containers Function
-async function getRunningDockerContainers() {
-    return new Promise((resolve, reject) => {
-        exec('docker ps --filter "status=running"', (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error executing docker ps: ${error.message}`);
-                return reject(error);
-            }
-            
-            if (stderr) {
-                console.error(`Docker command stderr: ${stderr}`);
-                return reject(new Error(stderr));
-            }
-
-            try {
-                const jsonData = parseDockerPsOutput(stdout);
-                console.log('Parsed container count:', jsonData);
-                resolve(jsonData);
-            } catch (error) {
-                console.error('Error parsing docker output:', error);
-                reject(error);
-            }
-        });
-    });
-}
-
-async function getExitedDockerContainers() {
-    return new Promise((resolve, reject) => {
-        exec('docker ps --filter "status=exited"', (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error executing docker ps: ${error.message}`);
-                return reject(error);
-            }
-            
-            if (stderr) {
-                console.error(`Docker command stderr: ${stderr}`);
-                return reject(new Error(stderr));
-            }
-
-            try {
-                const jsonData = parseDockerPsOutput(stdout);
-                console.log('Parsed container count:', jsonData.length);
-                resolve(jsonData);
-            } catch (error) {
-                console.error('Error parsing docker output:', error);
-                reject(error);
-            }
-        });
-    });
 }
 
 async function handleHelp(message, args) {
@@ -369,21 +216,54 @@ async function handleHelp(message, args) {
     await message.reply(helpMessage);
 }
 
-async function handleFeedback(message, args) {
-    const userFeedback = args.join(' ');
-    const phoneNumber = `${userFeedback}@c.us`;
+async function handleContainerStatus(message, args) {
+    const commandOption = args.join(' ');
+    try {
+        if (commandOption.toLowerCase() === 'active') {
+            const containerRunningStatus = await dockerMonitor.getRunningDockerContainers();
+            if (containerRunningStatus.length === 0) {
+                message.reply("No active Docker containers found");
+            } else {
+                const formattedRunningStatusOutput = containerRunningStatus.map(container => 
+                `🔖 *Name*: ${container.NAMES}\n🪅 *Status*: ${container.STATUS}\n⏰ *Created*: ${container.CREATED}`
+                ).join('\n\n');                    
+                message.reply(`⚡ *Active Containers* ⚡\n\n` + formattedRunningStatusOutput);
+            }
+            return;
+        } else if (commandOption.toLowerCase() === 'exited') {
+            const containerExitedStatus = await dockerMonitor.getExitedDockerContainers();
+            if (containerExitedStatus.length === 0) {
+                message.reply("No exited Docker containers found");
+            } else {
+                const formattedExitedStatusOutput = containerExitedStatus.map(container => 
+                `🔖 *Name*: ${container.NAMES}\n🪅 *Status*: ${container.STATUS}\n⏰ *Created*: ${container.CREATED}`
+                ).join('\n\n');
+                message.reply(`🚨 *Exited Containers* 🚨\n\n` + formattedExitedStatusOutput);
+            }
+            return;
+        } else {
+            message.reply('Please provide argument text.\n\nFormat:\n\n*!container active* - Get active containers \n*!container exited* - Get exited containers');
+            return;
+        }
+    } catch (error) {
+        console.error("Error getting container status:", error);
+        message.reply(`Error: ${error.message}`);
+    }
+}
 
-    // TODO: Admin can see all feedbacks & get feedback by users phoneNumber
+async function handleFeedback(message, args) {
+    const feedBackMessage = args.join(' ');
+    const phoneNumber = `${feedBackMessage}@c.us`;
     const isAdmin = await checkRoles(message.from) === 'admin';
 
     if (isAdmin) {
-        if (userFeedback.toLowerCase() === 'all') {
+        if (feedBackMessage.toLowerCase() === 'all') {
             const feedbacks = await feedBack.getFeedbacks();
             await message.reply(`All feedbacks:\n\n${feedbacks}`);
             return;
         } else if (/^62\d{10,13}@c\.us$/.test(phoneNumber)) {
             const feedback = await feedBack.getFeedbackById(phoneNumber);
-            await message.reply(`Feedback from ${userFeedback}:\n\n${feedback}`);
+            await message.reply(`Feedback from ${feedBackMessage}:\n\n${feedback}`);
             return;
         } else {
             await message.reply('Please provide argument text.\n\nFormat:\n\n*!feedback all* - Get all feedbacks \n*!feedback [userPhoneNumber]* - Get specific feedback');
@@ -391,22 +271,44 @@ async function handleFeedback(message, args) {
         }
     }
 
-    if (!userFeedback) {
+    if (!feedBackMessage) {
         await message.reply('Please provide feedback text.\nFormat: !feedback your message here');
         return;
     }
 
-    await feedBack.createFeedback(message.from, userFeedback);
+    await feedBack.createFeedback(message.from, feedBackMessage);
     await message.reply('Thank you for your feedback! It has been recorded.');
 }
 
 async function handleReport(message, args) {
-    const report = args.join(' ');
-    if (!report) {
-        await message.reply('Please provide report details.\nFormat: !report issue description');
+    const reportMessage = args.join(' ');
+    const phoneNumber = `${reportMessage}@c.us`;
+    const evidence = message._data.quotedMsg && message._data.quotedMsg.body ? message._data.quotedMsg.body : 'No evidence provided';
+
+    if (reportMessage.toLowerCase() === 'all') {
+        const reports = await reportBot.getReports();
+        await message.reply(`All reports:\n\n${reports}`);
+        return;
+    } else if (/^62\d{10,13}@c\.us$/.test(phoneNumber)) {
+        const report = await reportBot.getReportById(phoneNumber);
+        await message.reply(`Report from ${reportMessage}:\n\n${report}`);
         return;
     }
-    await message.reply('Report received. We will investigate the issue.');
+    // TODO: This is a temporary fix to allow reporting without evidence
+    else if (!reportMessage) {
+        await reportBot.createReport(message.from, evidence, reportMessage);
+        await message.reply('Report received. We will investigate the issue.');
+        return;
+    } else {
+        await message.reply('Please provide report details.\nFormat: !report issue description');
+        await message.reply('Please provide argument text.\n\nFormat:\n\n*!report all* - Get all feedbacks \n*!report [userPhoneNumber]* - Get specific feedback');
+        return;
+    }
+
+    // if (!reportMessage) {
+    //     await message.reply('Please provide feedback text.\nFormat: !feedback your message here');
+    //     return;
+    // }
 }
 
 async function handleInfo(message, args) {
