@@ -1,16 +1,6 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
 const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
-const fs = require('fs').promises;
-
-// Initialize WhatsApp client
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    }
-});
 
 // Store previous account state
 let previousAccounts = new Map();

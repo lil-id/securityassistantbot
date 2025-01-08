@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admins {
+  id                Int                 @id @default(autoincrement())
+  role              UserRoles           @default(admin)
+  name              String?
+  numberPhone       String              @unique
+  createdAt         DateTime            @default(now())
+  AdminActicitylogs AdminActicitylogs[]
+
+  @@map("admins")
+}
+
+model Users {
+  id               Int                @id @default(autoincrement())
+  role             UserRoles          @default(user)
+  name             String?
+  numberPhone      String             @unique
+  createdAt        DateTime           @default(now())
+  Feedbacks        Feedbacks[]
+  Reports          Reports[]
+  UserActicitylogs UserActicitylogs[]
+
+  @@map("users")
+}
+
+model Reports {
+  id        Int      @id @default(autoincrement())
+  user      Users    @relation(fields: [idUser], references: [id])
+  idUser    Int
+  report    String?
+  createdAt DateTime @default(now())
+
+  @@map("reports")
+}
+
+model Feedbacks {
+  id        Int      @id @default(autoincrement())
+  user      Users    @relation(fields: [idUser], references: [id])
+  idUser    Int
+  feedback  String?
+  createdAt DateTime @default(now())
+
+  @@map("feedbacks")
+}
+
+model AdminActicitylogs {
+  id        Int      @id @default(autoincrement())
+  admin     Admins   @relation(fields: [idAdmin], references: [id])
+  idAdmin   Int
+  activity  String?
+  createdAt DateTime @default(now())
+
+  @@map("adminacticitylogs")
+}
+
+model UserActicitylogs {
+  id        Int      @id @default(autoincrement())
+  user      Users    @relation(fields: [idUser], references: [id])
+  idUser    Int
+  activity  String?
+  createdAt DateTime @default(now())
+
+  @@map("useracticitylogs")
+}
+
+enum UserRoles {
+  admin
+  user
+}

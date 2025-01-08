@@ -2,8 +2,11 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { exec } = require("child_process");
-const systemMonitor = require('./system-monitor');
-const accountMonitor = require('./account-monitor');
+const systemMonitor = require('./src/models/systemMonitor');
+const accountMonitor = require('./src/models/accountMonitor');
+const feedBackModel = require('./src/models/feedBackModel');
+const prisma = require('./src/helpers/databaseConnection');
+require('dotenv').config();
 
 // Initialize WhatsApp client
 const client = new Client({
@@ -24,6 +27,7 @@ const adminCommands = {
     '!snap': handleSnapshot,
     '!response': handleActiveResponse,
     '!feedback': handleFeedback,
+    // '!stop': handleStop,
     '!report': handleReport,
     '!help': handleHelp,
     '!info': handleInfo,
@@ -66,10 +70,26 @@ client.on('message_create', async (message) => {
     // Split command and arguments
     const [command, ...args] = content.split(' ');
 
+    const adminPhoneNumber = await prisma.admins.findUnique({
+        where: {
+          numberPhone: sender
+        },
+        select: {
+            id: true,
+        }
+    });
+
     // Handle based on role
-    if (sender === process.env.ADMIN_NUMBER) {
+    if (adminPhoneNumber) {
         // Admin commands
         const adminHandler = adminCommands[command];
+        await prisma.adminActicitylogs.create({
+            data: {
+                idAdmin: adminPhoneNumber.id,
+                activity: command,
+            }
+        });
+
         if (adminHandler) {
             await adminHandler(message, args);
         } else {
@@ -164,7 +184,7 @@ async function handleContainerStatus(message, args) {
     try {
         const containerRunningStatus = await getRunningDockerContainers();
         const containerExitedStatus = await getExitedDockerContainers();
-        console.log("containerRunningStatus:", JSON.stringify(containerRunningStatus, null, 2));
+        // console.log("containerRunningStatus:", JSON.stringify(containerRunningStatus, null, 2));
                 
         if (containerRunningStatus.length === 0) {
             message.reply("No Docker containers found");
@@ -354,6 +374,8 @@ async function handleFeedback(message, args) {
         await message.reply('Please provide feedback text.\nFormat: !feedback your message here');
         return;
     }
+
+    await feedBackModel.createFeedback(message.from, feedback);
     await message.reply('Thank you for your feedback! It has been recorded.');
 }
 
