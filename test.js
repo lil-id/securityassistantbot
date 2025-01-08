@@ -4,7 +4,8 @@ const qrcode = require('qrcode-terminal');
 const { exec } = require("child_process");
 const systemMonitor = require('./src/models/systemMonitor');
 const accountMonitor = require('./src/models/accountMonitor');
-const feedBackModel = require('./src/models/feedBackModel');
+const { feedBack } = require('./src/models/feedBackModel');
+const { checkRoles } = require('./src/helpers/checkRoles');
 const prisma = require('./src/helpers/databaseConnection');
 require('dotenv').config();
 
@@ -369,13 +370,33 @@ async function handleHelp(message, args) {
 }
 
 async function handleFeedback(message, args) {
-    const feedback = args.join(' ');
-    if (!feedback) {
+    const userFeedback = args.join(' ');
+    const phoneNumber = `${userFeedback}@c.us`;
+
+    // TODO: Admin can see all feedbacks & get feedback by users phoneNumber
+    const isAdmin = await checkRoles(message.from) === 'admin';
+
+    if (isAdmin) {
+        if (userFeedback.toLowerCase() === 'all') {
+            const feedbacks = await feedBack.getFeedbacks();
+            await message.reply(`All feedbacks:\n\n${feedbacks}`);
+            return;
+        } else if (/^62\d{10,13}@c\.us$/.test(phoneNumber)) {
+            const feedback = await feedBack.getFeedbackById(phoneNumber);
+            await message.reply(`Feedback from ${userFeedback}:\n\n${feedback}`);
+            return;
+        } else {
+            await message.reply('Please provide argument text.\n\nFormat:\n\n*!feedback all* - Get all feedbacks \n*!feedback [userPhoneNumber]* - Get specific feedback');
+            return;
+        }
+    }
+
+    if (!userFeedback) {
         await message.reply('Please provide feedback text.\nFormat: !feedback your message here');
         return;
     }
 
-    await feedBackModel.createFeedback(message.from, feedback);
+    await feedBack.createFeedback(message.from, userFeedback);
     await message.reply('Thank you for your feedback! It has been recorded.');
 }
 
@@ -389,7 +410,6 @@ async function handleReport(message, args) {
 }
 
 async function handleInfo(message, args) {
-    // Basic info command
     await message.reply('Bot Security (Boty) v1.0\nCreated by lil-id');
 }
 
