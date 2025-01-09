@@ -1,5 +1,6 @@
 const { exec } = require('child_process');
 const util = require('util');
+const { alertChecker } = require('../helpers/alertChecker');
 const execPromise = util.promisify(exec);
 
 // Alert thresholds
@@ -23,12 +24,12 @@ async function getCPUUsage() {
     try {
         const { stdout } = await execPromise("top -bn1 | grep 'Cpu(s)' | awk '{print $2}'");
         const cpuUsage = parseFloat(stdout);
-        const alertLevel = getAlertLevel(cpuUsage, THRESHOLDS.cpu);
+        const alertLevel = alertChecker.getAlertLevel(cpuUsage, THRESHOLDS.cpu);
         
         return {
             value: cpuUsage.toFixed(1),
             alert: alertLevel,
-            formattedString: `CPU Usage: ${cpuUsage.toFixed(1)}% ${getAlertEmoji(alertLevel)}`
+            formattedString: `${alertChecker.getAlertEmoji(alertLevel)} *CPU Usage*: ${cpuUsage.toFixed(1)}%`
         };
     } catch (error) {
         console.error('Error getting CPU usage:', error);
@@ -49,7 +50,7 @@ async function getMemoryUsage() {
         const total = parseInt(totalMem);
         const used = parseInt(usedMem);
         const percentUsed = (used / total * 100).toFixed(1);
-        const alertLevel = getAlertLevel(percentUsed, THRESHOLDS.memory);
+        const alertLevel = alertChecker.getAlertLevel(percentUsed, THRESHOLDS.memory);
 
         // Get human readable values
         const { stdout } = await execPromise("free -h | grep 'Mem:'");
@@ -61,7 +62,7 @@ async function getMemoryUsage() {
             total: parts[1],
             used: parts[2],
             free: parts[3],
-            formattedString: `Memory: ${parts[2]} used of ${parts[1]} (${percentUsed}%) ${getAlertEmoji(alertLevel)}`
+            formattedString: `${alertChecker.getAlertEmoji(alertLevel)} *Memory*: ${parts[2]} used of ${parts[1]} (${percentUsed}%)`
         };
     } catch (error) {
         console.error('Error getting memory usage:', error);
@@ -79,7 +80,7 @@ async function getStorageUsage() {
         const { stdout } = await execPromise("df -h / | tail -n 1");
         const parts = stdout.split(/\s+/);
         const percentUsed = parseInt(parts[4]);
-        const alertLevel = getAlertLevel(percentUsed, THRESHOLDS.storage);
+        const alertLevel = alertChecker.getAlertLevel(percentUsed, THRESHOLDS.storage);
 
         return {
             value: percentUsed,
@@ -87,7 +88,7 @@ async function getStorageUsage() {
             total: parts[1],
             used: parts[2],
             available: parts[3],
-            formattedString: `Storage: ${parts[2]} used of ${parts[1]} (${parts[4]}) ${getAlertEmoji(alertLevel)}`
+            formattedString: `${alertChecker.getAlertEmoji(alertLevel)} *Storage*: ${parts[2]} used of ${parts[1]} (${parts[4]})`
         };
     } catch (error) {
         console.error('Error getting storage usage:', error);
@@ -96,23 +97,6 @@ async function getStorageUsage() {
             alert: 'error',
             formattedString: 'Storage Usage: Error reading'
         };
-    }
-}
-
-// Helper function to determine alert level
-function getAlertLevel(value, threshold) {
-    if (value >= threshold.critical) return 'critical';
-    if (value >= threshold.warning) return 'warning';
-    return 'normal';
-}
-
-// Helper function to get emoji for alert level
-function getAlertEmoji(alertLevel) {
-    switch (alertLevel) {
-        case 'critical': return '🔥';  // Fire for critical
-        case 'warning': return '💥';   // Explosion for warning
-        case 'normal': return '❇️';    // Green Snow for normal
-        default: return '⚠️';          // Warning sign for error
     }
 }
 
@@ -160,7 +144,7 @@ async function getSystemStats() {
 async function handleServerStatus(message, args) {
     try {
         const result = await getSystemStats();
-        const response = `📊 *System Statistics*\n\n` +
+        const response = `System Statistics\n\n` +
                         `${result.stats.cpu}\n` +
                         `${result.stats.memory}\n` +
                         `${result.stats.storage}`;
@@ -169,7 +153,7 @@ async function handleServerStatus(message, args) {
 
         // Send alerts to admin if there are any warnings/critical issues
         if (result.hasAlerts && message.from !== process.env.ADMIN_NUMBER) {
-            const alertMessage = `⚠️ *System Alert*\n\n${result.alerts.join('\n')}`;
+            const alertMessage = `System Alert\n\n${result.alerts.join('\n')}`;
             await client.sendMessage(process.env.ADMIN_NUMBER, alertMessage);
         }
     } catch (error) {
@@ -189,7 +173,7 @@ function startMonitoring(client, adminNumber, interval = 5 * 60 * 1000) { // Def
         try {
             const result = await getSystemStats();
             if (result.hasAlerts) {
-                const alertMessage = `⚠️ *Automated System Alert*\n\n${result.alerts.join('\n')}`;
+                const alertMessage = `Automated System Alert\n\n${result.alerts.join('\n')}`;
                 await client.sendMessage(adminNumber, alertMessage);
             }
         } catch (error) {

@@ -1,13 +1,14 @@
-// Required packages
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const systemMonitor = require('./src/models/systemMonitor');
 const accountMonitor = require('./src/models/accountMonitor');
+const { botUsers } = require('./src/models/users/userModel');
 const { dockerMonitor } = require('./src/models/dockerMonitor');
 const { feedBack } = require('./src/models/feedBackModel');
 const { reportBot } = require('./src/models/reportModel');
-const { checkRoles } = require('./src/helpers/rolesCheck');
+const { checkRoles } = require('./src/helpers/rolesChecker');
 const prisma = require('./src/helpers/databaseConnection');
+const { get } = require('systeminformation');
 require('dotenv').config();
 
 // Initialize WhatsApp client
@@ -18,8 +19,10 @@ const client = new Client({
     }
 });
 
-// Role-based command handlers
+// Add more commands here
 const adminCommands = {
+    // TODO: Add command to add user to admin or user general
+    '!add': handleAddUserCommand,
     '!server': systemMonitor.handleServerStatus,
     '!monitor': handleMonitorCommand,
     '!threshold': handleThresholdCommand,
@@ -29,11 +32,10 @@ const adminCommands = {
     '!snap': handleSnapshot,
     '!response': handleActiveResponse,
     '!feedback': handleFeedback,
-    // '!stop': handleStop,
     '!report': handleReport,
     '!help': handleHelp,
     '!info': handleInfo,
-    // Add more user commands here
+    '!stop': handleBotTermination,
 };
 
 const userCommands = {
@@ -46,7 +48,6 @@ const userCommands = {
     '!report': handleReport,
     '!help': handleHelp,
     '!info': handleInfo,
-    // Add more user commands here
 };
 
 // Generate QR code for authentication
@@ -54,7 +55,8 @@ client.on('qr', (qr) => {
     qrcode.generate(qr, { small: true });
     console.log('QR Code generated. Please scan with WhatsApp.');
 });
-// process.env.PORT
+
+// Check if client is ready
 client.on('ready', () => {
     console.log('Client is ready!');
     systemMonitor.startMonitoring(client, process.env.ADMIN_NUMBER);
@@ -63,46 +65,29 @@ client.on('ready', () => {
 
 // Message handler
 client.on('message_create', async (message) => {
-    const sender = message.author;
-    const content = message.body;
+    const content = message.body.replace(/\*/g, '');
 
     // Check if it's a command (starts with !)
     if (!content.startsWith('!')) return;
 
     // Split command and arguments
     const [command, ...args] = content.split(' ');
-
-    const adminPhoneNumber = await prisma.admins.findUnique({
-        where: {
-          numberPhone: sender
-        },
-        select: {
-            id: true,
-        }
-    });
+    const getRole = await checkRoles(message.author);
 
     // Handle based on role
-    if (adminPhoneNumber) {
-        // Admin commands
+    if (getRole && getRole.role === 'admin') {
         const adminHandler = adminCommands[command];
         await prisma.adminActicitylogs.create({
             data: {
-                idAdmin: adminPhoneNumber.id,
+                idAdmin: getRole.id,
                 activity: content,
             }
         });
 
         if (adminHandler) {
             await adminHandler(message, args);
-        } else {
-            // Admin can also use user commands
-            const userHandler = userCommands[command];
-            if (userHandler) {
-                await userHandler(message, args);
-            }
         }
     } else {
-        // User commands only
         const userHandler = userCommands[command];
         if (userHandler) {
             await userHandler(message, args);
@@ -110,7 +95,28 @@ client.on('message_create', async (message) => {
     }
 });
 
-// Admin command handlers
+// Add users handler command
+async function handleAddUserCommand(message, args) {
+    const getMentionsNames = await message.getMentions();
+    const existingUsers = await botUsers.checkExistingUsers(getMentionsNames);
+
+    if (existingUsers.length > 0) {
+        const existingUsersNames = getMentionsNames
+            .filter(user => existingUsers.includes(user.id._serialized))
+            .map(user => `🐨 ${user.name}`)
+            .join('\n');
+        await message.reply(`The following users already exist:\n\n${existingUsersNames}`);
+    }
+
+    const newUsers = getMentionsNames.filter(user => !existingUsers.includes(user.id._serialized));
+    if (newUsers.length > 0) {
+        const addedUsers = await botUsers.addUsers(newUsers);
+        const addedUsersNames = addedUsers.map(name => `🐨 ${name}`).join('\n');
+        await message.reply(`Users have been added successfully:\n\n${addedUsersNames}`);
+        await message.reply('Welcome to the team chief! 🎉');
+    }
+}
+
 // Start/stop monitoring command handler
 async function handleMonitorCommand(message, args) {
     if (!args.length) {
@@ -181,41 +187,17 @@ async function handleAccountMonitorCommand(message, args) {
     }
 }
 
+// System snapshot command handler
 async function handleSnapshot(message, args) {
     await message.reply('Creating system snapshot...\nSnapshot ID: SNAP-001');
 }
 
+// Active response command handler
 async function handleActiveResponse(message, args) {
     await message.reply('Active Response Summary:\nAlerts: 12\nResolved: 8\nPending: 4');
 }
 
-async function handleHelp(message, args) {
-    // Available commands based on role
-    const isAdmin = message.author === process.env.ADMIN_NUMBER;
-    let helpMessage = 'Available commands.\n\n';
-    
-    if (isAdmin) {
-        helpMessage += '*Admin Commands*:\n';
-        helpMessage += '!server - Check server status\n';
-        helpMessage += '!monitor - Start monitoring server\n';
-        helpMessage += '!threshold - Configure threshold\n';
-        helpMessage += '!account - Check server accounts\n';
-        helpMessage += '!container - Check container status\n';
-        helpMessage += '!snap - Create snapshot\n';
-        helpMessage += '!response - View active response summary\n';
-        helpMessage += '!feedback - View all feedback\n';
-        helpMessage += '!report - View all issues\n';
-        helpMessage += '!help - Show this help message\n';
-        helpMessage += '!info - Get bot information\n\n';
-    }
-    
-    helpMessage += '*User Commands*:\n';
-    helpMessage += '!help - Show this help message\n';
-    helpMessage += '!info - Get bot information';
-    
-    await message.reply(helpMessage);
-}
-
+// Container status command handler
 async function handleContainerStatus(message, args) {
     const commandOption = args.join(' ');
     try {
@@ -227,7 +209,7 @@ async function handleContainerStatus(message, args) {
                 const formattedRunningStatusOutput = containerRunningStatus.map(container => 
                 `🔖 *Name*: ${container.NAMES}\n🪅 *Status*: ${container.STATUS}\n⏰ *Created*: ${container.CREATED}`
                 ).join('\n\n');                    
-                message.reply(`⚡ *Active Containers* ⚡\n\n` + formattedRunningStatusOutput);
+                message.reply(`Active Containers\n\n` + formattedRunningStatusOutput);
             }
             return;
         } else if (commandOption.toLowerCase() === 'exited') {
@@ -238,7 +220,7 @@ async function handleContainerStatus(message, args) {
                 const formattedExitedStatusOutput = containerExitedStatus.map(container => 
                 `🔖 *Name*: ${container.NAMES}\n🪅 *Status*: ${container.STATUS}\n⏰ *Created*: ${container.CREATED}`
                 ).join('\n\n');
-                message.reply(`🚨 *Exited Containers* 🚨\n\n` + formattedExitedStatusOutput);
+                message.reply(`Exited Containers\n\n` + formattedExitedStatusOutput);
             }
             return;
         } else {
@@ -251,21 +233,23 @@ async function handleContainerStatus(message, args) {
     }
 }
 
+// Feedback command handler
 async function handleFeedback(message, args) {
     const feedBackMessage = args.join(' ');
-    const phoneNumber = `${feedBackMessage}@c.us`;
-    const isAdmin = await checkRoles(message.author) === 'admin';
-
-    if (isAdmin) {
+    const phoneNumber = message.mentionedIds.length > 0 ? message.mentionedIds : [message.from];
+    const getRole = await checkRoles(message.author);
+    
+    const getMentionsNames = await message.getMentions();
+    const names = getMentionsNames.map(contact => contact.name || 'Unknown').join(', ');
+    
+    if (getRole && getRole.role === 'admin') {
         if (feedBackMessage.toLowerCase() === 'all') {
             const feedbacks = await feedBack.getFeedbacks();
             await message.reply(`All feedbacks:\n\n${feedbacks}`);
             return;
-        }
-        // TODO: fitur get !feedback by mention username whatsapp. Take the phone number of mentioned username.
-        else if (/^62\d{10,13}@c\.us$/.test(phoneNumber)) {
+        } else if (phoneNumber.length > 0) {
             const feedback = await feedBack.getFeedbackById(phoneNumber);
-            await message.reply(`Feedback from ${feedBackMessage}:\n\n${feedback}`);
+            await message.reply(`Feedback from ${names}:\n\n${feedback}`);
             return;
         } else {
             await message.reply('Please provide argument text.\n\n*!feedback all* - Get all feedbacks \n*!feedback [userPhoneNumber]* - Get specific feedback');
@@ -282,20 +266,23 @@ async function handleFeedback(message, args) {
     await message.reply('Thank you for your feedback! It has been recorded.');
 }
 
+// Report command handler
 async function handleReport(message, args) {
     const reportMessage = args.join(' ');
-    const phoneNumber = `${reportMessage}@c.us`;
+    const phoneNumber = message.mentionedIds.length > 0 ? message.mentionedIds : [message.from];
+
+    const getMentionsNames = await message.getMentions();
+
+    const names = getMentionsNames.map(contact => contact.name || 'Unknown').join(', ');
     const evidence = message._data.quotedMsg && message._data.quotedMsg.body ? message._data.quotedMsg.body : 'No evidence provided';
 
     if (reportMessage.toLowerCase() === 'all') {
         const reports = await reportBot.getReports();
         await message.reply(`All reports:\n\n${reports}`);
         return;
-    }
-    // TODO: fitur get !report by mention username whatsapp. Take the phone number of mentioned username.
-    else if (/^62\d{10,13}@c\.us$/.test(phoneNumber)) {
+    } else if (phoneNumber.length > 0) {
         const report = await reportBot.getReportById(phoneNumber);
-        await message.reply(`Report from ${reportMessage}:\n\n${report}`);
+        await message.reply(`Report from ${names}:\n\n${report}`);
         return;
     }
     else if (!reportMessage) {
@@ -307,8 +294,54 @@ async function handleReport(message, args) {
     }
 }
 
+// Available commands based on role
+async function handleHelp(message, args) {
+    const getRole = await checkRoles(message.author);
+    let helpMessage = 'Available commands.\n\n';
+    
+    if (getRole && getRole.role === 'admin') {
+        helpMessage += '*Admin Commands*:\n';
+        helpMessage += '!add - Added new member\n'
+        helpMessage += '!server - Check server status\n';
+        helpMessage += '!monitor - Start monitoring server\n';
+        helpMessage += '!threshold - Configure threshold\n';
+        helpMessage += '!account - Check server accounts\n';
+        helpMessage += '!container - Check container status\n';
+        helpMessage += '!snap - Create snapshot\n';
+        helpMessage += '!response - View active response summary\n';
+        helpMessage += '!feedback - View all feedback\n';
+        helpMessage += '!report - View all issues\n';
+        helpMessage += '!help - Show this help message\n';
+        helpMessage += '!info - Get bot information\n';
+        helpMessage += '!stop - Terminate bot\n';
+
+        await message.reply(helpMessage);
+        return
+    }
+    
+    helpMessage += '*User Commands*:\n';
+    helpMessage += '!server - Check server status\n';
+    helpMessage += '!account - Check server accounts\n';
+    helpMessage += '!container - Check container status\n';
+    helpMessage += '!snap - Create snapshot\n';
+    helpMessage += '!response - View active response summary\n';
+    helpMessage += '!feedback - Create feedback\n';
+    helpMessage += '!report - Report issues\n';
+    helpMessage += '!help - Show this help message\n';
+    helpMessage += '!info - Get bot information\n';
+
+    await message.reply(helpMessage);
+    return;
+}
+
+// Bot information command handler
 async function handleInfo(message, args) {
     await message.reply('Bot Security (Boty) v1.0\nCreated by lil-id');
+}
+
+// Bot information command handler
+async function handleBotTermination(message, args) {
+    await message.reply('Bot terminated by Admin');
 }
 
 // Initialize the client

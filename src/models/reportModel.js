@@ -1,16 +1,16 @@
 const prisma = require('../helpers/databaseConnection');
 
 class reportBot {
-    static async getUserId(userPhoneNumber) {
-        const user = await prisma.users.findUnique({
+    static async getUserIds(userPhoneNumbers) {
+        const users = await prisma.users.findMany({
             where: {
-                numberPhone: userPhoneNumber
+                numberPhone: { in: userPhoneNumbers }
             },
             select: {
                 id: true
             }
         });
-        return user.id;
+        return users.map(user => user.id);
     }
 
     static async createReport(sender, evidence, report) {
@@ -49,10 +49,10 @@ class reportBot {
         )).join('\n');
     }
 
-    static async getReportById(userPhoneNumber) {
-        const userId = await this.getUserId(userPhoneNumber);
-        const report = await prisma.reports.findMany({
-            where: { idUser: userId },
+    static async getReportById(userPhoneNumbers) {
+        const userIds = await this.getUserIds(userPhoneNumbers);
+        const reports = await prisma.reports.findMany({
+            where: { idUser: { in: userIds } },
             include: {
                 user: {
                     select: {
@@ -63,11 +63,11 @@ class reportBot {
             }
         });
 
-        if (report.length === 0) {
+        if (reports.length === 0) {
             return "No report available.";
         }
         
-        return report.map((report) => (
+        return reports.map((report) => (
             `📝 *Report #${report.id}*\n` +
             `👤 *Name:* ${report.user.name}\n` +
             `📱 *Phone:* ${report.user.numberPhone.replace('@c.us', '')}\n` +

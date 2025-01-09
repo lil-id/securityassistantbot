@@ -39,8 +39,8 @@ model Users {
 
 model Reports {
   id        Int      @id @default(autoincrement())
-  user      Users    @relation(fields: [idUser], references: [id])
-  idUser    Int
+  user      Users?    @relation(fields: [idUser], references: [id], onDelete: SetNull)
+  idUser    Int?
   evidence  String?
   report    String?
   createdAt DateTime @default(now())

@@ -1,16 +1,16 @@
 const prisma = require('../helpers/databaseConnection');
 
 class feedBack {
-    static async getUserId(userPhoneNumber) {
-        const user = await prisma.users.findUnique({
+    static async getUserIds(userPhoneNumbers) {
+        const users = await prisma.users.findMany({
             where: {
-                numberPhone: userPhoneNumber
+                numberPhone: { in: userPhoneNumbers }
             },
             select: {
                 id: true
             }
         });
-        return user.id;
+        return users.map(user => user.id);
     }
 
     static async createFeedback(sender, feedback) {
@@ -48,10 +48,10 @@ class feedBack {
         )).join('\n');
     }
 
-    static async getFeedbackById(userPhoneNumber) {
-        const userId = await this.getUserId(userPhoneNumber);
-        const feedback = await prisma.feedbacks.findMany({
-            where: { idUser: userId },
+    static async getFeedbackById(userPhoneNumbers) {
+        const userIds = await this.getUserIds(userPhoneNumbers);
+        const feedbacks = await prisma.feedbacks.findMany({
+            where: { idUser: { in: userIds } },
             include: {
                 user: {
                     select: {
@@ -62,11 +62,11 @@ class feedBack {
             }
         });
 
-        if (feedback.length === 0) {
+        if (feedbacks.length === 0) {
             return "No feedback available.";
         }
         
-        return feedback.map((feedback) => (
+        return feedbacks.map((feedback) => (
             `📝 *Feedback #${feedback.id}*\n` +
             `👤 *Name:* ${feedback.user.name}\n` +
             `📱 *Phone:* ${feedback.user.numberPhone.replace('@c.us', '')}\n` +
