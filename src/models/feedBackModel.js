@@ -7,17 +7,19 @@ class feedBack {
                 numberPhone: { in: userPhoneNumbers }
             },
             select: {
-                id: true
+                id: true,
+                name: true,
             }
         });
-        return users.map(user => user.id);
+        return users.map(user => ({ id: user.id, name: user.name }));
     }
 
     static async createFeedback(sender, feedback) {
-        const userId = await this.getUserId(sender);
+        const userId = await this.getUserIds(sender);
         await prisma.feedbacks.create({
             data: {
-                idUser: userId,
+                idUser: userId.id,
+                name: userId.name,
                 feedback: feedback,
             }
         });
@@ -51,7 +53,11 @@ class feedBack {
     static async getFeedbackById(userPhoneNumbers) {
         const userIds = await this.getUserIds(userPhoneNumbers);
         const feedbacks = await prisma.feedbacks.findMany({
-            where: { idUser: { in: userIds } },
+            where: {
+                idUser: {
+                    in: userIds.map(user => user.id)
+                }
+            },
             include: {
                 user: {
                     select: {

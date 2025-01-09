@@ -39,8 +39,9 @@ model Users {
 
 model Reports {
   id        Int      @id @default(autoincrement())
-  user      Users?    @relation(fields: [idUser], references: [id], onDelete: SetNull)
+  user      Users?   @relation(fields: [idUser], references: [id], onDelete: SetNull)
   idUser    Int?
+  name      String?
   evidence  String?
   report    String?
   createdAt DateTime @default(now())
@@ -50,8 +51,9 @@ model Reports {
 
 model Feedbacks {
   id        Int      @id @default(autoincrement())
-  user      Users    @relation(fields: [idUser], references: [id])
-  idUser    Int
+  user      Users?   @relation(fields: [idUser], references: [id], onDelete: SetNull)
+  idUser    Int?
+  name      String?
   feedback  String?
   createdAt DateTime @default(now())
 
@@ -60,8 +62,9 @@ model Feedbacks {
 
 model AdminActicitylogs {
   id        Int      @id @default(autoincrement())
-  admin     Admins   @relation(fields: [idAdmin], references: [id])
-  idAdmin   Int
+  admin     Admins?  @relation(fields: [idAdmin], references: [id], onDelete: SetNull)
+  idAdmin   Int?
+  name      String?
   activity  String?
   createdAt DateTime @default(now())
 
@@ -70,8 +73,9 @@ model AdminActicitylogs {
 
 model UserActicitylogs {
   id        Int      @id @default(autoincrement())
-  user      Users    @relation(fields: [idUser], references: [id])
-  idUser    Int
+  user      Users?   @relation(fields: [idUser], references: [id], onDelete: SetNull)
+  idUser    Int?
+  name      String?
   activity  String?
   createdAt DateTime @default(now())
 

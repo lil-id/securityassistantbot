@@ -7,17 +7,19 @@ class reportBot {
                 numberPhone: { in: userPhoneNumbers }
             },
             select: {
-                id: true
+                id: true,
+                name: true,
             }
         });
-        return users.map(user => user.id);
+        return users.map(user => ({ id: user.id, name: user.name }));
     }
 
     static async createReport(sender, evidence, report) {
-        const userId = await this.getUserId(sender);
+        const userId = await this.getUserIds(sender);
         await prisma.reports.create({
             data: {
-                idUser: userId,
+                idUser: userId.id,
+                name: userId.name,
                 evidence: evidence,
                 report: report,
             }
@@ -52,7 +54,11 @@ class reportBot {
     static async getReportById(userPhoneNumbers) {
         const userIds = await this.getUserIds(userPhoneNumbers);
         const reports = await prisma.reports.findMany({
-            where: { idUser: { in: userIds } },
+            where: {
+                idUser: { 
+                    in: userIds.map(user => user.id) 
+                }
+            },
             include: {
                 user: {
                     select: {

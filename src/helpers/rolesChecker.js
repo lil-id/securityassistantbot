@@ -7,6 +7,7 @@ async function checkRoles(sender) {
         },
         select: {
             id: true,
+            name: true,
             role: true
         }
     });
