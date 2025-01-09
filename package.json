@@ -2,9 +2,9 @@
   "name": "securityassistantbot",
   "version": "1.0.0",
   "description": "Your SOC partner that help reduce headache because false positive from SIEM",
-  "main": "test.js",
+  "main": "app.js",
   "scripts": {
-    "dev": "npx nodemon test.js",
+    "dev": "npx nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "prisma": {
