@@ -11,6 +11,15 @@ const { checkRoles } = require('./src/helpers/rolesChecker');
 const prisma = require('./src/helpers/databaseConnection');
 const { get } = require('systeminformation');
 require('dotenv').config();
+const { default: ollama } = require('ollama');
+
+async function sendCommandToAI(text) {
+    const response = await ollama.chat({
+      model: 'llama3.2:1b',
+      messages: [{ role: 'user', content: text }],
+    })
+    return response.message.content;
+}
 
 // Initialize WhatsApp client
 const client = new Client({
@@ -24,6 +33,7 @@ const client = new Client({
 const adminCommands = {
     // TODO: Add command to add user to admin or user general
     '!admin': handleAddAdminCommand,
+    '!ask': handleAddAICommand,
     '!user': handleAddUserCommand,
     '!server': systemMonitor.handleServerStatus,
     '!monitor': handleMonitorCommand,
@@ -112,6 +122,12 @@ client.on('message_create', async (message) => {
         }
     }
 });
+
+async function handleAddAICommand(message, args) {
+    const content = args.join(' ');
+    const response = await sendCommandToAI(content);
+    await message.reply(response);
+}
 
 // Add users handler command
 async function handleAddUserCommand(message, args) {
@@ -354,6 +370,7 @@ async function handleHelp(message, args) {
     
     if (getRole && getRole.role === 'admin') {
         helpMessage += '*Admin Commands*:\n';
+        helpMessage += '!ask - Ask question to AI\n'
         helpMessage += '!admin - Added new admin\n'
         helpMessage += '!user - Added new member\n'
         helpMessage += '!server - Check server status\n';
