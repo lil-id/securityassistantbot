@@ -393,9 +393,19 @@ async function handleInfo(message, args) {
     await message.reply('Bot Security (Boty) v1.0\nCreated by lil-id');
 }
 
+// TODO: add termination command feature
 // Bot information command handler
 async function handleBotTermination(message, args) {
-    await message.reply('Bot terminated by Admin');
+    const getRole = await checkRoles(message.author);
+    console.log(getRole);
+
+    // if (getRole && getRole.role === 'admin') {
+    //     await message.reply('Bot terminated by Admin');
+    //     await client.logout();
+    //     process.exit(0);
+    // } else {
+    //     await message.reply('You do not have permission to terminate the bot.');
+    // }
 }
 
 // Initialize the client
