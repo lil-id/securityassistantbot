@@ -398,14 +398,6 @@ async function handleInfo(message, args) {
 async function handleBotTermination(message, args) {
     const getRole = await checkRoles(message.author);
     console.log(getRole);
-
-    // if (getRole && getRole.role === 'admin') {
-    //     await message.reply('Bot terminated by Admin');
-    //     await client.logout();
-    //     process.exit(0);
-    // } else {
-    //     await message.reply('You do not have permission to terminate the bot.');
-    // }
 }
 
 // Initialize the client
