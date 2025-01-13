@@ -1,115 +1,131 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
-const systemMonitor = require('./src/models/systemMonitor');
-const accountMonitor = require('./src/models/accountMonitor');
-const { botAdmins } = require('./src/models/admins/adminModel');
-const { botUsers } = require('./src/models/users/userModel');
-const { dockerMonitor } = require('./src/models/dockerMonitor');
-const { feedBack } = require('./src/models/feedBackModel');
-const { reportBot } = require('./src/models/reportModel');
-const { checkRoles } = require('./src/helpers/rolesChecker');
-const prisma = require('./src/helpers/databaseConnection');
-const { get } = require('systeminformation');
-require('dotenv').config();
-const { default: ollama } = require('ollama');
-
-async function sendCommandToAI(text) {
-    const response = await ollama.chat({
-      model: 'llama3.2:1b',
-      messages: [{ role: 'user', content: text }],
-    })
-    return response.message.content;
-}
+const { Client, LocalAuth, Base } = require("whatsapp-web.js");
+const qrcode = require("qrcode-terminal");
+const systemMonitor = require("./src/models/systemMonitor");
+const accountMonitor = require("./src/models/accountMonitor");
+const { botAdmins } = require("./src/models/admins/adminModel");
+const { botUsers } = require("./src/models/users/userModel");
+const { dockerMonitor } = require("./src/models/dockerMonitor");
+const { feedBack } = require("./src/models/feedBackModel");
+const { reportBot } = require("./src/models/reportModel");
+const { checkRoles } = require("./src/helpers/rolesChecker");
+const prisma = require("./src/helpers/databaseConnection");
+const { get } = require("systeminformation");
+require("dotenv").config();
+const { ollamaModel } = require("./src/models/ai/ollamaModel");
 
 // Initialize WhatsApp client
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    }
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    },
 });
+
+// Store group IDs
+const groups = {
+    announcement: "",
+    member: "",
+};
 
 // Add more commands here
 const adminCommands = {
-    // TODO: Add command to add user to admin or user general
-    '!admin': handleAddAdminCommand,
-    '!ask': handleAddAICommand,
-    '!user': handleAddUserCommand,
-    '!server': systemMonitor.handleServerStatus,
-    '!monitor': handleMonitorCommand,
-    '!threshold': handleThresholdCommand,
-    '!account': accountMonitor.handleAccountCheck,
-    '!accmon': handleAccountMonitorCommand,
-    '!container': handleContainerStatus,
-    '!snap': handleSnapshot,
-    '!response': handleActiveResponse,
-    '!feedback': handleFeedback,
-    '!report': handleReport,
-    '!help': handleHelp,
-    '!info': handleInfo,
-    '!stop': handleBotTermination,
+    "!admin": handleAddAdminCommand,
+    "!ask": handleAddAICommand,
+    "!user": handleAddUserCommand,
+    "!server": systemMonitor.handleServerStatus,
+    "!monitor": handleMonitorCommand,
+    "!threshold": handleThresholdCommand,
+    "!account": accountMonitor.handleAccountCheck,
+    "!accmon": handleAccountMonitorCommand,
+    "!container": handleContainerStatus,
+    "!snap": handleSnapshot,
+    "!response": handleActiveResponse,
+    "!feedback": handleFeedback,
+    "!report": handleReport,
+    "!help": handleHelp,
+    "!info": handleInfo,
+    "!stop": handleBotTermination,
 };
 
 const userCommands = {
-    '!server': systemMonitor.handleServerStatus,
-    '!account': accountMonitor.handleAccountCheck,
-    '!container': handleContainerStatus,
-    '!snap': handleSnapshot,
-    '!response': handleActiveResponse,
-    '!feedback': handleFeedback,
-    '!report': handleReport,
-    '!help': handleHelp,
-    '!info': handleInfo,
+    "!server": systemMonitor.handleServerStatus,
+    "!account": accountMonitor.handleAccountCheck,
+    "!container": handleContainerStatus,
+    "!snap": handleSnapshot,
+    "!response": handleActiveResponse,
+    "!feedback": handleFeedback,
+    "!report": handleReport,
+    "!help": handleHelp,
+    "!info": handleInfo,
 };
 
 // Generate QR code for authentication
-client.on('qr', (qr) => {
+client.on("qr", (qr) => {
     qrcode.generate(qr, { small: true });
-    console.log('QR Code generated. Please scan with WhatsApp.');
+    console.log("QR Code generated. Please scan with WhatsApp.");
 });
 
 // Check if client is ready
-client.on('ready', async () => {
-    console.log('Client is ready!');
+client.on("ready", async () => {
+    console.log("Client is ready!");
+    // Function to find group IDs
+    // TODO: Send wazuh alerts to security alert group
+    async function findGroups() {
+        const chats = await client.getChats();
+        // console.log(chats);
+        chats.forEach((chat) => {
+            if (chat.name.toLowerCase() === "security alert") {
+                groups.announcement = chat.id._serialized;
+            } else if (chat.name.toLowerCase() === "security member") {
+                groups.member = chat.id._serialized;
+            }
+        });
+        console.log("Groups found:", groups);
+    }
+
+    findGroups();
+
     const initializeAdmin = {
-        name: 'First Admin',
+        name: "First Admin",
         id: {
-            _serialized: client.info.wid._serialized
-        }
+            _serialized: client.info.wid._serialized,
+        },
     };
 
-    const existingAdmins = await botAdmins.checkExistingAdmins([initializeAdmin]);
-    
+    const existingAdmins = await botAdmins.checkExistingAdmins([
+        initializeAdmin,
+    ]);
+
     if (existingAdmins.length === 0) {
         await botAdmins.addAdmins([initializeAdmin]);
-        console.log('First admin added to the database.');
+        console.log("First admin added to the database.");
     } else {
-        console.log('Admin already exists in the database.');
+        console.log("Admin already exists in the database.");
     }
     // systemMonitor.startMonitoring(client, process.env.ADMIN_NUMBER);
     // accountMonitor.startAccountMonitoring(client, process.env.ADMIN_NUMBER);
 });
 
 // Message handler
-client.on('message_create', async (message) => {
-    const content = message.body.replace(/\*/g, '');
+client.on("message_create", async (message) => {
+    const content = message.body.replace(/\*/g, "");
 
     // Check if it's a command (starts with !)
-    if (!content.startsWith('!')) return;
+    if (!content.startsWith("!")) return;
 
     // Split command and arguments
-    const [command, ...args] = content.split(' ');
+    const [command, ...args] = content.split(" ");
     const getRole = await checkRoles(message.author);
 
     // Handle based on role
-    if (getRole && getRole.role === 'admin') {
+    if (getRole && getRole.role === "admin") {
         const adminHandler = adminCommands[command];
         await prisma.adminActicitylogs.create({
             data: {
                 idAdmin: getRole.id,
                 name: getRole.name,
                 activity: content,
-            }
+            },
         });
 
         if (adminHandler) {
@@ -124,8 +140,9 @@ client.on('message_create', async (message) => {
 });
 
 async function handleAddAICommand(message, args) {
-    const content = args.join(' ');
-    const response = await sendCommandToAI(content);
+    const content = args.join(" ");
+    await message.reply("Asking AI...");
+    const response = await ollamaModel.sendPrompt(content);
     await message.reply(response);
 }
 
@@ -136,41 +153,59 @@ async function handleAddUserCommand(message, args) {
 
     if (existingUsers.length > 0) {
         const existingUsersNames = getMentionsNames
-            .filter(user => existingUsers.includes(user.id._serialized))
-            .map(user => `🐨 ${user.name}`)
-            .join('\n');
-        await message.reply(`The following users already exist:\n\n${existingUsersNames}`);
+            .filter((user) => existingUsers.includes(user.id._serialized))
+            .map((user) => `🐨 ${user.name}`)
+            .join("\n");
+        await message.reply(
+            `The following users already exist:\n\n${existingUsersNames}`
+        );
     }
 
-    const newUsers = getMentionsNames.filter(user => !existingUsers.includes(user.id._serialized));
+    const newUsers = getMentionsNames.filter(
+        (user) => !existingUsers.includes(user.id._serialized)
+    );
     if (newUsers.length > 0) {
         const addedUsers = await botUsers.addUsers(newUsers);
-        const addedUsersNames = addedUsers.map(name => `🐨 ${name}`).join('\n');
-        await message.reply(`Users have been added successfully:\n\n${addedUsersNames}`);
-        await message.reply('Welcome to the team chief! 🎉');
+        const addedUsersNames = addedUsers
+            .map((name) => `🐨 ${name}`)
+            .join("\n");
+        await message.reply(
+            `Users have been added successfully:\n\n${addedUsersNames}`
+        );
+        await message.reply("Welcome to the team chief! 🎉");
     }
 }
 
 // Add users handler command
 async function handleAddAdminCommand(message, args) {
     const getMentionsNames = await message.getMentions();
-    const existingAdmins = await botAdmins.checkExistingAdmins(getMentionsNames);
+    const existingAdmins = await botAdmins.checkExistingAdmins(
+        getMentionsNames
+    );
 
     if (existingAdmins.length > 0) {
         const existingAdminsNames = getMentionsNames
-            .filter(admin => existingAdmins.includes(admin.id._serialized))
-            .map(admin => `🐨 ${admin.name}`)
-            .join('\n');
-        await message.reply(`The following admins already exist:\n\n${existingAdminsNames}`);
+            .filter((admin) => existingAdmins.includes(admin.id._serialized))
+            .map((admin) => `🐨 ${admin.name}`)
+            .join("\n");
+        await message.reply(
+            `The following admins already exist:\n\n${existingAdminsNames}`
+        );
     }
 
-    const newAdmins = getMentionsNames.filter(admin => !existingAdmins.includes(admin.id._serialized));
+    const newAdmins = getMentionsNames.filter(
+        (admin) => !existingAdmins.includes(admin.id._serialized)
+    );
 
     if (newAdmins.length > 0) {
         const addedAdmins = await botAdmins.addAdmins(newAdmins);
-        const addedAdminsNames = addedAdmins.map(name => `🐨 ${name}`).join('\n');
-        await message.reply(`Admins have been added successfully:\n\n${addedAdminsNames}`);
-        await message.reply('Welcome to the team chief! 🎉');
+        const addedAdminsNames = addedAdmins
+            .map((name) => `🐨 ${name}`)
+            .join("\n");
+        await message.reply(
+            `Admins have been added successfully:\n\n${addedAdminsNames}`
+        );
+        await message.reply("Welcome to the team chief! 🎉");
     }
 }
 
@@ -178,21 +213,29 @@ async function handleAddAdminCommand(message, args) {
 async function handleMonitorCommand(message, args) {
     if (!args.length) {
         await message.reply(
-            'Usage:\n' +
-            '!monitor start [interval] - Start monitoring (interval in minutes, default 5)\n' +
-            '!monitor stop - Stop monitoring'
+            "Usage:\n" +
+                "!monitor start [interval] - Start monitoring (interval in minutes, default 5)\n" +
+                "!monitor stop - Stop monitoring"
         );
         return;
     }
 
     const action = args[0].toLowerCase();
-    if (action === 'start') {
+    if (action === "start") {
         const interval = args[1] ? parseInt(args[1]) * 60 * 1000 : undefined;
-        systemMonitor.startMonitoring(client, process.env.ADMIN_NUMBER, interval);
-        await message.reply(`Monitoring started. Interval: ${interval ? interval/60000 : 5} minutes`);
-    } else if (action === 'stop') {
+        systemMonitor.startMonitoring(
+            client,
+            process.env.ADMIN_NUMBER,
+            interval
+        );
+        await message.reply(
+            `Monitoring started. Interval: ${
+                interval ? interval / 60000 : 5
+            } minutes`
+        );
+    } else if (action === "stop") {
         systemMonitor.stopMonitoring();
-        await message.reply('Monitoring stopped');
+        await message.reply("Monitoring stopped");
     }
 }
 
@@ -200,8 +243,8 @@ async function handleMonitorCommand(message, args) {
 async function handleThresholdCommand(message, args) {
     if (args.length !== 3) {
         await message.reply(
-            'Usage: !threshold <cpu|memory|storage> <warning|critical> <value>\n' +
-            'Example: !threshold cpu warning 70'
+            "Usage: !threshold <cpu|memory|storage> <warning|critical> <value>\n" +
+                "Example: !threshold cpu warning 70"
         );
         return;
     }
@@ -210,15 +253,20 @@ async function handleThresholdCommand(message, args) {
     const numValue = parseInt(value);
 
     if (isNaN(numValue) || numValue < 0 || numValue > 100) {
-        await message.reply('Value must be between 0 and 100');
+        await message.reply("Value must be between 0 and 100");
         return;
     }
 
-    if (systemMonitor.THRESHOLDS[resource] && systemMonitor.THRESHOLDS[resource][level] !== undefined) {
+    if (
+        systemMonitor.THRESHOLDS[resource] &&
+        systemMonitor.THRESHOLDS[resource][level] !== undefined
+    ) {
         systemMonitor.THRESHOLDS[resource][level] = numValue;
-        await message.reply(`${resource} ${level} threshold set to ${numValue}%`);
+        await message.reply(
+            `${resource} ${level} threshold set to ${numValue}%`
+        );
     } else {
-        await message.reply('Invalid resource or level');
+        await message.reply("Invalid resource or level");
     }
 }
 
@@ -226,62 +274,86 @@ async function handleThresholdCommand(message, args) {
 async function handleAccountMonitorCommand(message, args) {
     if (!args.length) {
         await message.reply(
-            'Usage:\n' +
-            '!accmon start [interval] - Start account monitoring (interval in minutes, default 15)\n' +
-            '!accmon stop - Stop account monitoring'
+            "Usage:\n" +
+                "!accmon start [interval] - Start account monitoring (interval in minutes, default 15)\n" +
+                "!accmon stop - Stop account monitoring"
         );
         return;
     }
 
     const action = args[0].toLowerCase();
-    if (action === 'start') {
+    if (action === "start") {
         const interval = args[1] ? parseInt(args[1]) * 60 * 1000 : undefined;
-        accountMonitor.startAccountMonitoring(client, process.env.ADMIN_NUMBER, interval);
-        await message.reply(`Account monitoring started. Interval: ${interval ? interval/60000 : 15} minutes`);
-    } else if (action === 'stop') {
+        accountMonitor.startAccountMonitoring(
+            client,
+            process.env.ADMIN_NUMBER,
+            interval
+        );
+        await message.reply(
+            `Account monitoring started. Interval: ${
+                interval ? interval / 60000 : 15
+            } minutes`
+        );
+    } else if (action === "stop") {
         accountMonitor.stopAccountMonitoring();
-        await message.reply('Account monitoring stopped');
+        await message.reply("Account monitoring stopped");
     }
 }
 
 // System snapshot command handler
 async function handleSnapshot(message, args) {
-    await message.reply('Creating system snapshot...\nSnapshot ID: SNAP-001');
+    await message.reply("Creating system snapshot...\nSnapshot ID: SNAP-001");
 }
 
 // Active response command handler
 async function handleActiveResponse(message, args) {
-    await message.reply('Active Response Summary:\nAlerts: 12\nResolved: 8\nPending: 4');
+    await message.reply(
+        "Active Response Summary:\nAlerts: 12\nResolved: 8\nPending: 4"
+    );
 }
 
 // Container status command handler
 async function handleContainerStatus(message, args) {
-    const commandOption = args.join(' ');
+    const commandOption = args.join(" ");
     try {
-        if (commandOption.toLowerCase() === 'active') {
-            const containerRunningStatus = await dockerMonitor.getRunningDockerContainers();
+        if (commandOption.toLowerCase() === "active") {
+            const containerRunningStatus =
+                await dockerMonitor.getRunningDockerContainers();
             if (containerRunningStatus.length === 0) {
                 message.reply("No active Docker containers found");
             } else {
-                const formattedRunningStatusOutput = containerRunningStatus.map(container => 
-                `🔖 *Name*: ${container.NAMES}\n🪅 *Status*: ${container.STATUS}\n⏰ *Created*: ${container.CREATED}`
-                ).join('\n\n');                    
-                message.reply(`Active Containers\n\n` + formattedRunningStatusOutput);
+                const formattedRunningStatusOutput = containerRunningStatus
+                    .map(
+                        (container) =>
+                            `🔖 *Name*: ${container.NAMES}\n🪅 *Status*: ${container.STATUS}\n⏰ *Created*: ${container.CREATED}`
+                    )
+                    .join("\n\n");
+                message.reply(
+                    `Active Containers\n\n` + formattedRunningStatusOutput
+                );
             }
             return;
-        } else if (commandOption.toLowerCase() === 'exited') {
-            const containerExitedStatus = await dockerMonitor.getExitedDockerContainers();
+        } else if (commandOption.toLowerCase() === "exited") {
+            const containerExitedStatus =
+                await dockerMonitor.getExitedDockerContainers();
             if (containerExitedStatus.length === 0) {
                 message.reply("No exited Docker containers found");
             } else {
-                const formattedExitedStatusOutput = containerExitedStatus.map(container => 
-                `🔖 *Name*: ${container.NAMES}\n🪅 *Status*: ${container.STATUS}\n⏰ *Created*: ${container.CREATED}`
-                ).join('\n\n');
-                message.reply(`Exited Containers\n\n` + formattedExitedStatusOutput);
+                const formattedExitedStatusOutput = containerExitedStatus
+                    .map(
+                        (container) =>
+                            `🔖 *Name*: ${container.NAMES}\n🪅 *Status*: ${container.STATUS}\n⏰ *Created*: ${container.CREATED}`
+                    )
+                    .join("\n\n");
+                message.reply(
+                    `Exited Containers\n\n` + formattedExitedStatusOutput
+                );
             }
             return;
         } else {
-            message.reply('Please provide argument text.\n\n*!container active* - Get active containers \n*!container exited* - Get exited containers');
+            message.reply(
+                "Please provide argument text.\n\n*!container active* - Get active containers \n*!container exited* - Get exited containers"
+            );
             return;
         }
     } catch (error) {
@@ -292,17 +364,19 @@ async function handleContainerStatus(message, args) {
 
 // Feedback command handler
 async function handleFeedback(message, args) {
-    const feedBackMessage = args.join(' ');
+    const feedBackMessage = args.join(" ");
     const phoneNumber = message.mentionedIds;
-    
+
     const getRole = await checkRoles(message.author);
     const getMentionsNames = await message.getMentions();
 
-    const names = getMentionsNames.map(contact => contact.name || 'Unknown').join(', ');
-    
-    if (getRole && getRole.role === 'admin') {
+    const names = getMentionsNames
+        .map((contact) => contact.name || "Unknown")
+        .join(", ");
+
+    if (getRole && getRole.role === "admin") {
         // Get all feedbacks
-        if (feedBackMessage.toLowerCase() === 'all') {
+        if (feedBackMessage.toLowerCase() === "all") {
             const feedbacks = await feedBack.getFeedbacks();
             await message.reply(`All feedbacks:\n\n${feedbacks}`);
             return;
@@ -315,31 +389,40 @@ async function handleFeedback(message, args) {
         }
         // No feedback message
         else if (!feedBackMessage) {
-            await message.reply('Please provide feedback details or provide argument text.\n\n*!report* issue description\n*!feedback all* - Get all feedbacks \n*!feedback <userPhoneNumber>* - Get specific feedback');
+            await message.reply(
+                "Please provide feedback details or provide argument text.\n\n*!report* issue description\n*!feedback all* - Get all feedbacks \n*!feedback <userPhoneNumber>* - Get specific feedback"
+            );
             return;
         }
         // Create feedback
         else {
             await feedBack.createFeedback(message.author, feedBackMessage);
-            await message.reply('Thank you for your feedback! It has been recorded.');
+            await message.reply(
+                "Thank you for your feedback! It has been recorded."
+            );
         }
     }
 }
 
 // Report command handler
 async function handleReport(message, args) {
-    const reportMessage = args.join(' ');
+    const reportMessage = args.join(" ");
     const phoneNumber = message.mentionedIds;
 
     const getRole = await checkRoles(message.author);
     const getMentionsNames = await message.getMentions();
 
-    const names = getMentionsNames.map(contact => contact.name || 'Unknown').join(', ');
-    const evidence = message._data.quotedMsg && message._data.quotedMsg.body ? message._data.quotedMsg.body : 'No evidence provided';
+    const names = getMentionsNames
+        .map((contact) => contact.name || "Unknown")
+        .join(", ");
+    const evidence =
+        message._data.quotedMsg && message._data.quotedMsg.body
+            ? message._data.quotedMsg.body
+            : "No evidence provided";
 
-    if (getRole && getRole.role === 'admin') {     
-        // Get all reports   
-        if (reportMessage.toLowerCase() === 'all') {
+    if (getRole && getRole.role === "admin") {
+        // Get all reports
+        if (reportMessage.toLowerCase() === "all") {
             const reports = await reportBot.getReports();
             await message.reply(`All reports:\n\n${reports}`);
             return;
@@ -352,13 +435,21 @@ async function handleReport(message, args) {
         }
         // No report message
         else if (!reportMessage) {
-            await message.reply('Please provide report details or provide argument text.\n\n*!report* issue description\n*!report all* - Get all reports \n*!report <userPhoneNumber>* - Get specific report');
+            await message.reply(
+                "Please provide report details or provide argument text.\n\n*!report* issue description\n*!report all* - Get all reports \n*!report <userPhoneNumber>* - Get specific report"
+            );
             return;
         }
         // Create report
         else {
-            await reportBot.createReport(message.author, evidence, reportMessage);
-            await message.reply('Report received. We will investigate the issue.');
+            await reportBot.createReport(
+                message.author,
+                evidence,
+                reportMessage
+            );
+            await message.reply(
+                "Report received. We will investigate the issue."
+            );
         }
     }
 }
@@ -366,40 +457,40 @@ async function handleReport(message, args) {
 // Available commands based on role
 async function handleHelp(message, args) {
     const getRole = await checkRoles(message.author);
-    let helpMessage = 'Available commands.\n\n';
-    
-    if (getRole && getRole.role === 'admin') {
-        helpMessage += '*Admin Commands*:\n';
-        helpMessage += '!ask - Ask question to AI\n'
-        helpMessage += '!admin - Added new admin\n'
-        helpMessage += '!user - Added new member\n'
-        helpMessage += '!server - Check server status\n';
-        helpMessage += '!monitor - Start monitoring server\n';
-        helpMessage += '!threshold - Configure threshold\n';
-        helpMessage += '!account - Check server accounts\n';
-        helpMessage += '!container - Check container status\n';
-        helpMessage += '!snap - Create snapshot\n';
-        helpMessage += '!response - View active response summary\n';
-        helpMessage += '!feedback - View all feedback\n';
-        helpMessage += '!report - View all issues\n';
-        helpMessage += '!help - Show this help message\n';
-        helpMessage += '!info - Get bot information\n';
-        helpMessage += '!stop - Terminate bot\n';
+    let helpMessage = "Available commands.\n\n";
+
+    if (getRole && getRole.role === "admin") {
+        helpMessage += "*Admin Commands*:\n";
+        helpMessage += "!ask - Ask question to AI\n";
+        helpMessage += "!admin - Added new admin\n";
+        helpMessage += "!user - Added new member\n";
+        helpMessage += "!server - Check server status\n";
+        helpMessage += "!monitor - Start monitoring server\n";
+        helpMessage += "!threshold - Configure threshold\n";
+        helpMessage += "!account - Check server accounts\n";
+        helpMessage += "!container - Check container status\n";
+        helpMessage += "!snap - Create snapshot\n";
+        helpMessage += "!response - View active response summary\n";
+        helpMessage += "!feedback - View all feedback\n";
+        helpMessage += "!report - View all issues\n";
+        helpMessage += "!help - Show this help message\n";
+        helpMessage += "!info - Get bot information\n";
+        helpMessage += "!stop - Terminate bot\n";
 
         await message.reply(helpMessage);
-        return
+        return;
     }
-    
-    helpMessage += '*User Commands*:\n';
-    helpMessage += '!server - Check server status\n';
-    helpMessage += '!account - Check server accounts\n';
-    helpMessage += '!container - Check container status\n';
-    helpMessage += '!snap - Create snapshot\n';
-    helpMessage += '!response - View active response summary\n';
-    helpMessage += '!feedback - Create feedback\n';
-    helpMessage += '!report - Report issues\n';
-    helpMessage += '!help - Show this help message\n';
-    helpMessage += '!info - Get bot information\n';
+
+    helpMessage += "*User Commands*:\n";
+    helpMessage += "!server - Check server status\n";
+    helpMessage += "!account - Check server accounts\n";
+    helpMessage += "!container - Check container status\n";
+    helpMessage += "!snap - Create snapshot\n";
+    helpMessage += "!response - View active response summary\n";
+    helpMessage += "!feedback - Create feedback\n";
+    helpMessage += "!report - Report issues\n";
+    helpMessage += "!help - Show this help message\n";
+    helpMessage += "!info - Get bot information\n";
 
     await message.reply(helpMessage);
     return;
@@ -407,14 +498,14 @@ async function handleHelp(message, args) {
 
 // Bot information command handler
 async function handleInfo(message, args) {
-    await message.reply('Bot Security (Boty) v1.0\nCreated by lil-id');
+    await message.reply("Bot Security (Boty) v1.0\nCreated by lil-id");
 }
 
 // TODO: add termination command feature
 // Bot information command handler
 async function handleBotTermination(message, args) {
-    const getRole = await checkRoles(message.author);
-    console.log(getRole);
+    await message.reply("Bot is terminating...");
+    await client.destroy();
 }
 
 // Initialize the client
