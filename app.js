@@ -1,17 +1,36 @@
-const { Client, LocalAuth, Base } = require("whatsapp-web.js");
-const qrcode = require("qrcode-terminal");
-const systemMonitor = require("./src/models/systemMonitor");
-const accountMonitor = require("./src/models/accountMonitor");
+const { Client, LocalAuth } = require("whatsapp-web.js");
 const { botAdmins } = require("./src/models/admins/adminModel");
 const { botUsers } = require("./src/models/users/userModel");
 const { dockerMonitor } = require("./src/models/dockerMonitor");
 const { feedBack } = require("./src/models/feedBackModel");
 const { reportBot } = require("./src/models/reportModel");
 const { checkRoles } = require("./src/helpers/rolesChecker");
-const prisma = require("./src/helpers/databaseConnection");
-const { get } = require("systeminformation");
-require("dotenv").config();
+const { handleReport } = require('./src/controllers/reportController');
+const { handleBotTermination } = require('./src/controllers/botController');
+const { prisma, checkDatabaseConnection } = require('./src/helpers/databaseConnection');
 const { ollamaModel } = require("./src/models/ai/ollamaModel");
+const { exec } = require('child_process');
+const cron = require('node-cron');
+const qrcode = require("qrcode-terminal");
+const systemMonitor = require("./src/models/systemMonitor");
+const accountMonitor = require("./src/models/accountMonitor");
+const express = require('express');
+const bodyParser = require('body-parser');
+const helmet = require('helmet');
+
+require("dotenv").config();
+
+// Check database connection
+checkDatabaseConnection();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'your-secure-secret-key';
+
+// Middleware
+app.use(helmet());
+app.use(bodyParser.json());
+app.set('trust proxy', true);
 
 // Initialize WhatsApp client
 const client = new Client({
@@ -19,6 +38,121 @@ const client = new Client({
     puppeteer: {
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
     },
+});
+
+// Generate QR code for authentication
+client.on("qr", (qr) => {
+    qrcode.generate(qr, { small: true });
+    console.log("QR Code generated. Please scan with WhatsApp.");
+});
+
+// Check if client is ready
+client.on("ready", async () => {
+    console.log("Client is ready!");
+    // Find group IDs
+    async function findGroups() {
+        const chats = await client.getChats();
+        chats.forEach((chat) => {
+            if (chat.name.toLowerCase() === "security alert") {
+                groups.announcement = chat.id._serialized;
+            } else if (chat.name.toLowerCase() === "security member") {
+                groups.member = chat.id._serialized;
+            }
+        });
+    }
+
+    findGroups();
+
+    const initializeAdmin = {
+        name: "First Admin",
+        id: {
+            _serialized: client.info.wid._serialized,
+        },
+    };
+
+    const existingAdmins = await botAdmins.checkExistingAdmins([
+        initializeAdmin,
+    ]);
+
+    if (existingAdmins.length === 0) {
+        await botAdmins.addAdmins([initializeAdmin]);
+        console.log("First admin added to the database.");
+    } else {
+        console.log("Admin already exists in the database.");
+    }
+    // systemMonitor.startMonitoring(client, process.env.ADMIN_NUMBER);
+    // accountMonitor.startAccountMonitoring(client, process.env.ADMIN_NUMBER);
+});
+
+// Message handler
+client.on("message_create", async (message) => {
+    const content = typeof message.body === 'string' ? message.body.replace(/\*/g, "") : '';
+
+    // Check if it's a command (starts with !)
+    if (!content.startsWith("!")) return;
+
+    // Split command and arguments
+    const [command, ...args] = content.split(" ");
+    const getRole = await checkRoles(message.author);
+
+    // Handle based on role
+    if (getRole && getRole.role === "admin") {
+        const adminHandler = adminCommands[command];
+        await prisma.adminActicitylogs.create({
+            data: {
+                idAdmin: getRole.id,
+                name: getRole.name,
+                activity: content,
+            },
+        });
+
+        if (adminHandler) {
+            await adminHandler(message, args);
+        }
+    } else {
+        const userHandler = userCommands[command];
+        if (userHandler) {
+            await userHandler(message, args);
+        }
+    }
+});
+
+// Webhook endpoint
+app.post('/wazuh/alerts', async (req, res) => {
+    try {
+        const alert = req.body;
+
+        if (alert.length !== 0) {
+            // Send message to WhatsApp group
+            await client.sendMessage(groups.announcement, 
+                `🖥️ *Agent*: ${alert.agent.name}\n` +
+                `📝 *Description*: ${alert.rule.description}\n` + 
+                `🔔 *Rule Level*: ${alert.rule.level}\n` +
+                `🕒 *Timestamp*: ${alert.timestamp}\n` +
+                `🌐 *Src IP*: ${alert.data.srcip}\n` +
+                `🏷️ *Groups*: ${alert.rule.groups}\n` +
+                `📋 *Full Log*: ${alert.full_log}\n`
+            );
+            res.status(200).json({ status: 'Alert received successfully' });
+        } else {
+            console.warn('Alert content is undefined or null');
+            res.status(400).json({ error: 'Alert content is missing' });
+        }
+    } catch (error) {
+        console.error('Error processing alert:', error);
+        res.status(500).json({ error: 'Error processing alert' });
+    }
+});
+
+// Root endpoint for testing
+app.get('/', (req, res) => {
+    res.send('Wazuh webhook receiver is running!');
+});
+
+// Error handling
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Something went wrong!' });
 });
 
 // Store group IDs
@@ -58,86 +192,6 @@ const userCommands = {
     "!help": handleHelp,
     "!info": handleInfo,
 };
-
-// Generate QR code for authentication
-client.on("qr", (qr) => {
-    qrcode.generate(qr, { small: true });
-    console.log("QR Code generated. Please scan with WhatsApp.");
-});
-
-// Check if client is ready
-client.on("ready", async () => {
-    console.log("Client is ready!");
-    // Function to find group IDs
-    // TODO: Send wazuh alerts to security alert group
-    async function findGroups() {
-        const chats = await client.getChats();
-        // console.log(chats);
-        chats.forEach((chat) => {
-            if (chat.name.toLowerCase() === "security alert") {
-                groups.announcement = chat.id._serialized;
-            } else if (chat.name.toLowerCase() === "security member") {
-                groups.member = chat.id._serialized;
-            }
-        });
-        console.log("Groups found:", groups);
-    }
-
-    findGroups();
-
-    const initializeAdmin = {
-        name: "First Admin",
-        id: {
-            _serialized: client.info.wid._serialized,
-        },
-    };
-
-    const existingAdmins = await botAdmins.checkExistingAdmins([
-        initializeAdmin,
-    ]);
-
-    if (existingAdmins.length === 0) {
-        await botAdmins.addAdmins([initializeAdmin]);
-        console.log("First admin added to the database.");
-    } else {
-        console.log("Admin already exists in the database.");
-    }
-    // systemMonitor.startMonitoring(client, process.env.ADMIN_NUMBER);
-    // accountMonitor.startAccountMonitoring(client, process.env.ADMIN_NUMBER);
-});
-
-// Message handler
-client.on("message_create", async (message) => {
-    const content = message.body.replace(/\*/g, "");
-
-    // Check if it's a command (starts with !)
-    if (!content.startsWith("!")) return;
-
-    // Split command and arguments
-    const [command, ...args] = content.split(" ");
-    const getRole = await checkRoles(message.author);
-
-    // Handle based on role
-    if (getRole && getRole.role === "admin") {
-        const adminHandler = adminCommands[command];
-        await prisma.adminActicitylogs.create({
-            data: {
-                idAdmin: getRole.id,
-                name: getRole.name,
-                activity: content,
-            },
-        });
-
-        if (adminHandler) {
-            await adminHandler(message, args);
-        }
-    } else {
-        const userHandler = userCommands[command];
-        if (userHandler) {
-            await userHandler(message, args);
-        }
-    }
-});
 
 async function handleAddAICommand(message, args) {
     const content = args.join(" ");
@@ -302,14 +356,39 @@ async function handleAccountMonitorCommand(message, args) {
 
 // System snapshot command handler
 async function handleSnapshot(message, args) {
-    await message.reply("Creating system snapshot...\nSnapshot ID: SNAP-001");
+    await message.reply("Creating system snapshot...");
+    exec('bash src/scripts/systemSnapshot.sh', { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error creating snapshot: ${error.message}`);
+            message.reply(`Error creating snapshot: ${error.message}`);
+            return;
+        }
+        console.log(`Snapshot stdout: ${stdout}`);
+        message.reply("Successfully created and uploaded snapshot to GCP Cloud Storage.");
+    });
 }
+
+// Schedule snapshot to run every day at 00:00 AM
+cron.schedule('25 11 * * *', () => {
+    client.sendMessage(groups.member, "Running scheduled system snapshot...");
+    console.log('Running scheduled system snapshot...');
+    exec('bash src/scripts/systemSnapshot.sh', { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error creating snapshot: ${error.message}`);
+            return;
+        }
+        client.sendMessage(groups.member, "Scheduled system snapshot completed.");
+    });
+});
 
 // Active response command handler
 async function handleActiveResponse(message, args) {
-    await message.reply(
-        "Active Response Summary:\nAlerts: 12\nResolved: 8\nPending: 4"
-    );
+    if (!alertContent) {
+        await message.reply("No active response available");
+        return;
+    }
+
+    await message.sendMessage(groups.announcement, alertContent);
 }
 
 // Container status command handler
@@ -405,54 +484,54 @@ async function handleFeedback(message, args) {
 }
 
 // Report command handler
-async function handleReport(message, args) {
-    const reportMessage = args.join(" ");
-    const phoneNumber = message.mentionedIds;
+// async function handleReport(message, args) {
+//     const reportMessage = args.join(" ");
+//     const phoneNumber = message.mentionedIds;
 
-    const getRole = await checkRoles(message.author);
-    const getMentionsNames = await message.getMentions();
+//     const getRole = await checkRoles(message.author);
+//     const getMentionsNames = await message.getMentions();
 
-    const names = getMentionsNames
-        .map((contact) => contact.name || "Unknown")
-        .join(", ");
-    const evidence =
-        message._data.quotedMsg && message._data.quotedMsg.body
-            ? message._data.quotedMsg.body
-            : "No evidence provided";
+//     const names = getMentionsNames
+//         .map((contact) => contact.name || "Unknown")
+//         .join(", ");
+//     const evidence =
+//         message._data.quotedMsg && message._data.quotedMsg.body
+//             ? message._data.quotedMsg.body
+//             : "No evidence provided";
 
-    if (getRole && getRole.role === "admin") {
-        // Get all reports
-        if (reportMessage.toLowerCase() === "all") {
-            const reports = await reportBot.getReports();
-            await message.reply(`All reports:\n\n${reports}`);
-            return;
-        }
-        // Get report by phone number
-        else if (phoneNumber.length > 0) {
-            const report = await reportBot.getReportById(phoneNumber);
-            await message.reply(`Report from ${names}:\n\n${report}`);
-            return;
-        }
-        // No report message
-        else if (!reportMessage) {
-            await message.reply(
-                "Please provide report details or provide argument text.\n\n*!report* issue description\n*!report all* - Get all reports \n*!report <userPhoneNumber>* - Get specific report"
-            );
-            return;
-        }
-        // Create report
-        else {
-            await reportBot.createReport(
-                message.author,
-                evidence,
-                reportMessage
-            );
-            await message.reply(
-                "Report received. We will investigate the issue."
-            );
-        }
-    }
-}
+//     if (getRole && getRole.role === "admin") {
+//         // Get all reports
+//         if (reportMessage.toLowerCase() === "all") {
+//             const reports = await reportBot.getReports();
+//             await message.reply(`All reports:\n\n${reports}`);
+//             return;
+//         }
+//         // Get report by phone number
+//         else if (phoneNumber.length > 0) {
+//             const report = await reportBot.getReportById(phoneNumber);
+//             await message.reply(`Report from ${names}:\n\n${report}`);
+//             return;
+//         }
+//         // No report message
+//         else if (!reportMessage) {
+//             await message.reply(
+//                 "Please provide report details or provide argument text.\n\n*!report* issue description\n*!report all* - Get all reports \n*!report <userPhoneNumber>* - Get specific report"
+//             );
+//             return;
+//         }
+//         // Create report
+//         else {
+//             await reportBot.createReport(
+//                 message.author,
+//                 evidence,
+//                 reportMessage
+//             );
+//             await message.reply(
+//                 "Report received. We will investigate the issue."
+//             );
+//         }
+//     }
+// }
 
 // Available commands based on role
 async function handleHelp(message, args) {
@@ -501,12 +580,16 @@ async function handleInfo(message, args) {
     await message.reply("Bot Security (Boty) v1.0\nCreated by lil-id");
 }
 
-// TODO: add termination command feature
 // Bot information command handler
-async function handleBotTermination(message, args) {
-    await message.reply("Bot is terminating...");
-    await client.destroy();
-}
+// async function handleBotTermination(message, args) {
+//     await message.reply("Bot is terminating...");
+//     await client.destroy();
+// }
 
 // Initialize the client
 client.initialize();
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`Wazuh webhook receiver listening on port ${PORT}`);
+});

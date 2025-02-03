@@ -1,4 +1,4 @@
-const prisma = require('./databaseConnection');
+const { prisma } = require('./databaseConnection');
 
 async function checkRoles(sender) {
     const admin = await prisma.admins.findUnique({

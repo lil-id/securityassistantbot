@@ -1,4 +1,4 @@
-const prisma = require('../../helpers/databaseConnection');
+const { prisma } = require('../../helpers/databaseConnection');
 
 class botAdmins {
     static async addAdmins(admins) {
