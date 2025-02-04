@@ -1,7 +1,7 @@
-const { botAdmins } = require('../models/admins/adminModel');
+const { checkRoles } = require("../helpers/rolesChecker");
 const { responseMessages } = require('../views/responseMessage');
 
-async function handleBotTermination(message, args) {
+async function handleBotTermination(client, message, args) {
     const getRole = await checkRoles(message.author);
 
     if (getRole && getRole.role === 'admin') {

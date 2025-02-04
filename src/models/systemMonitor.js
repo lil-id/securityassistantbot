@@ -140,27 +140,6 @@ async function getSystemStats() {
     }
 }
 
-// Example usage with the WhatsApp bot
-async function handleServerStatus(message, args) {
-    try {
-        const result = await getSystemStats();
-        const response = `System Statistics\n\n` +
-                        `${result.stats.cpu}\n` +
-                        `${result.stats.memory}\n` +
-                        `${result.stats.storage}`;
-        
-        await message.reply(response);
-
-        // Send alerts to admin if there are any warnings/critical issues
-        if (result.hasAlerts && message.from !== process.env.ADMIN_NUMBER) {
-            const alertMessage = `System Alert\n\n${result.alerts.join('\n')}`;
-            await client.sendMessage(process.env.ADMIN_NUMBER, alertMessage);
-        }
-    } catch (error) {
-        await message.reply('Error getting system statistics');
-    }
-}
-
 // Periodic monitoring function
 let monitorInterval = null;
 
@@ -195,7 +174,6 @@ module.exports = {
     getMemoryUsage,
     getStorageUsage,
     getSystemStats,
-    handleServerStatus,
     startMonitoring,
     stopMonitoring,
     THRESHOLDS

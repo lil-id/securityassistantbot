@@ -1,6 +1,7 @@
-const { exec } = require('child_process');
 const util = require('util');
+const { exec } = require('child_process');
 const execPromise = util.promisify(exec);
+const { formatAccountInfo } = require('../helpers/accountFormatter');
 
 // Store previous account state
 let previousAccounts = new Map();
@@ -177,73 +178,6 @@ async function checkAccountChanges(currentAccounts) {
     return changes;
 }
 
-// Format account information for WhatsApp message
-function formatAccountInfo(account) {
-    return `👤 *${account.username}*\n` +
-           `UID: ${account.uid}\n` +
-           `Shell: ${account.shell}\n` +
-           `Groups: ${account.groups.join(', ') || 'None'}\n` +
-           `Last Login: ${account.lastLogin}\n` +
-           `Home: ${account.homeDir}\n` +
-           (account.isSuspicious ? '⚠️ *Suspicious Account*\n' : '');
-}
-
-// Handler for WhatsApp bot
-async function handleAccountCheck(message, args) {
-    try {
-        const accounts = await getAccountDetails();
-        const changes = await checkAccountChanges(accounts);
-
-        let response = '📊 *Account Status Report*\n\n';
-
-        // Report new accounts
-        if (changes.added.length > 0) {
-            response += '🆕 *New Accounts:*\n';
-            changes.added.forEach(account => {
-                response += formatAccountInfo(account) + '\n';
-            });
-        }
-
-        // Report suspicious accounts
-        if (changes.suspicious.length > 0) {
-            response += '⚠️ *Suspicious Accounts:*\n';
-            changes.suspicious.forEach(account => {
-                response += formatAccountInfo(account) + '\n';
-            });
-        }
-
-        // Report removed accounts
-        if (changes.removed.length > 0) {
-            response += '❌ *Removed Accounts:*\n';
-            changes.removed.forEach(account => {
-                response += `- ${account.username}\n`;
-            });
-        }
-
-        // If no changes, show summary
-        if (!changes.added.length && !changes.removed.length && !changes.suspicious.length) {
-            response += '✅ No suspicious activity detected\n\n';
-            response += `Total Accounts: ${accounts.size}\n`;
-            response += `System Accounts: ${[...accounts.values()].filter(a => a.uid < 1000).length}\n`;
-            response += `User Accounts: ${[...accounts.values()].filter(a => a.uid >= 1000).length}\n`;
-        }
-
-        await message.reply(response);
-
-        // Send detailed report to admin if suspicious activity found
-        if (changes.suspicious.length > 0 && message.from !== process.env.ADMIN_NUMBER) {
-            const adminAlert = '🚨 *Suspicious Account Activity Detected*\n\n' +
-                             changes.suspicious.map(formatAccountInfo).join('\n');
-            console.log(process.env.ADMIN_NUMBER, adminAlert);
-            await client.sendMessage(process.env.ADMIN_NUMBER, adminAlert);
-        }
-
-    } catch (error) {
-        console.error('Error in handleAccountCheck:', error);
-        await message.reply('Error checking account status');
-    }
-}
-
 // Periodic account monitoring
 let accountMonitorInterval = null;
 
@@ -293,7 +227,6 @@ function stopAccountMonitoring() {
 module.exports = {
     getAccountDetails,
     checkAccountChanges,
-    handleAccountCheck,
     startAccountMonitoring,
     stopAccountMonitoring
 };

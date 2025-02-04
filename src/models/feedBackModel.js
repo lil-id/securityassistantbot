@@ -1,7 +1,12 @@
-const prisma = require('../helpers/databaseConnection');
+const { prisma } = require('../helpers/databaseConnection');
 
 class feedBack {
     static async getUserIds(userPhoneNumbers) {
+        
+        if (!Array.isArray(userPhoneNumbers)) {
+            userPhoneNumbers = [userPhoneNumbers];
+        }
+
         const users = await prisma.users.findMany({
             where: {
                 numberPhone: { in: userPhoneNumbers }

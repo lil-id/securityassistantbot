@@ -1,40 +1,53 @@
 const { reportBot } = require('../models/reportModel');
-const { checkRoles } = require('../models/users/userModel');
-const { responseMessages } = require('../views/responseMessage');
+const { checkRoles } = require('../helpers/rolesChecker');
 
-async function handleReport(message, args) {
-    const reportMessage = args.join(' ');
-    const phoneNumbers = message.mentionedIds.length > 0 ? message.mentionedIds : [message.from];
+async function handleReport(client, message, args) {
+    const reportMessage = args.join(" ");
+    const phoneNumber = message.mentionedIds;
+
     const getRole = await checkRoles(message.author);
     const getMentionsNames = await message.getMentions();
-    const names = getMentionsNames.map(contact => contact.name || 'Unknown').join(', ');
 
-    const evidence = message._data.quotedMsg && message._data.quotedMsg.body
-        ? message._data.quotedMsg.body
-        : "No evidence provided";
+    const names = getMentionsNames
+        .map((contact) => contact.name || "Unknown")
+        .join(", ");
+    const evidence =
+        message._data.quotedMsg && message._data.quotedMsg.body
+            ? message._data.quotedMsg.body
+            : "No evidence provided";
 
     if (getRole && getRole.role === "admin") {
+        // Get all reports
         if (reportMessage.toLowerCase() === "all") {
             const reports = await reportBot.getReports();
             await message.reply(`All reports:\n\n${reports}`);
             return;
-        } else if (phoneNumbers.length > 0) {
-            const reports = await reportBot.getReportById(phoneNumbers);
-            await message.reply(`Reports for specified numbers:\n\n${reports}`);
-            return;
-        } else {
-            await message.reply(responseMessages.invalidFormat);
+        }
+        // Get report by phone number
+        else if (phoneNumber.length > 0) {
+            const report = await reportBot.getReportById(phoneNumber);
+            await message.reply(`Report from ${names}:\n\n${report}`);
             return;
         }
+        // No report message
+        else if (!reportMessage) {
+            await message.reply(
+                "Please provide report details or provide argument text.\n\n*!report* issue description\n*!report all* - Get all reports \n*!report <userPhoneNumber>* - Get specific report"
+            );
+            return;
+        }
+        // Create report
+        else {
+            await reportBot.createReport(
+                message.author,
+                evidence,
+                reportMessage
+            );
+            await message.reply(
+                "Report received. We will investigate the issue."
+            );
+        }
     }
-
-    if (!reportMessage) {
-        await message.reply(responseMessages.noReportDetails);
-        return;
-    }
-
-    await reportBot.createReport(message.from, reportMessage);
-    await message.reply(`Report from ${names}:\n\n${reportMessage}`);
 }
 
 module.exports = { handleReport };

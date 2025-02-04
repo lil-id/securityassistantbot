@@ -119,7 +119,7 @@ class dockerMonitor {
     }
 
     // Check container status command handler
-    static async handleContainerStatus(message, args) {
+    static async handleContainerStatus(client, message, args) {
         try {
             const containerRunningStatus = await this.getRunningDockerContainers();
             const containerExitedStatus = await this.getExitedDockerContainers();

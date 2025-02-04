@@ -1,5 +1,4 @@
 const { Ollama } = require('ollama');
-const axios = require('axios');
 require('dotenv').config();
 class ollamaModel {
     static async sendPrompt(text) {
