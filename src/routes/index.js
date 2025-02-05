@@ -2,10 +2,10 @@ const { Router } = require('express');
 
 const { setWazuhWebhookRoutes } = require('./wazuh');
 
-const routes = (app, client, groups) => {
+const routes = (app, client, groups, io) => {
     const v1 = Router();
     v1.use('/v1', v1);
-    setWazuhWebhookRoutes(v1, client, groups);
+    setWazuhWebhookRoutes(v1, client, groups, io);
 
     app.use('/api', v1);
 }

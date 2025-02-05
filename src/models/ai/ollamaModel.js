@@ -1,4 +1,5 @@
 const { Ollama } = require('ollama');
+const axios = require('axios');
 require('dotenv').config();
 class ollamaModel {
     static async sendPrompt(text) {
@@ -9,6 +10,15 @@ class ollamaModel {
         })
         return response.message.content;
     }
+
+    static async isServerRunning() {
+      try {
+          const response = await axios.get(`${process.env.OLLAMA_HOST}`);
+          return response.status === 200;
+      } catch (error) {
+          return false;
+      }
+  }
 }
 
 module.exports = { ollamaModel };

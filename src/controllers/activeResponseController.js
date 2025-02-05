@@ -1,24 +1,117 @@
 const { Router } = require('express');
+const { Server } = require('socket.io');
+const redis = require("ioredis");
+const axios = require("axios");
+require('dotenv').config();
 
 const wazuhRouter = Router();
+const redisClient = new redis();
+
+// Check if IP is malicious using an external threat intelligence API
+async function checkThreatIntel(ip, retries = 3) {
+    try {
+        const response = await axios.get(`${process.env.ABUSEIPDB_API_URL}/check?ipAddress=${ip}`, {
+            headers: { "Key": process.env.ABUSEIPDB_API_KEY },
+            timeout: 5000,
+            signal: AbortSignal.timeout(5000)
+        });
+        return response.data.data.abuseConfidenceScore >= 50; // Mark if abuse score is high
+    } catch (error) {
+        if (error.code === 'ETIMEDOUT' && retries > 0) {
+            console.warn(`Timeout occurred. Retrying... (${retries} retries left)`);
+            return checkThreatIntel(ip, retries - 1);
+        }
+        console.error("Threat intelligence check failed");
+        return false;
+    }
+}
+
+// Track alerts from the same IP
+async function trackAlert(ip) {
+    const key = `alert_count:${ip}`;
+    let count = await redisClient.get(key);
+
+    if (!count) {
+        await redisClient.setex(key, 300, 1); // Set TTL of 5 minutes
+        return 1; // First occurrence
+    }
+
+    count = parseInt(count) + 1;
+    await redisClient.setex(key, 300, count); // Reset TTL on update
+    return count;
+}
+
+// Store alerts in Redis (TTL: 5 minutes)
+async function storeAlert(alert) {
+    const key = `alerts:${alert.src_ip}`;
+    await redisClient.rpush(key, JSON.stringify(alert)); // Push alert to list
+    await redisClient.expire(key, 300); // Set expiration to 5 minutes
+}
+
+// Determine if an alert is interesting
+async function isInteresting(alert) {
+    // Always check if the source IP is malicious
+    const isMalicious = await checkThreatIntel(alert.src_ip);
+    if (isMalicious) return true; // Flag malicious sources
+
+    // Check alert severity
+    if (alert.level >= 5) return true; // Critical alerts are always interesting
+
+    return alert.groups.includes("authentication_failed") && alert.groups.includes("invalid_login");
+}
+
+
+// Process incoming alert
+async function processAlert(alert, client, groups) {
+    await storeAlert(alert);
+    const count = await trackAlert(alert.src_ip);
+    console.log(count === 1 ? "🔍 New alert detected!" : "🔍 Alert already detected. Incrementing count...");
+    if (count === 1) {
+        if (await isInteresting(alert)) {
+            console.log("🚨 Interesting alert detected! Escalating...");
+            // Send message to WhatsApp group
+            await client.sendMessage(groups.announcement, 
+                `🖥️ *Agent*: ${alert.agent}\n` +
+                `📝 *Description*: ${alert.description}\n` + 
+                `🔔 *Rule Level*: ${alert.level}\n` +
+                `🕒 *Timestamp*: ${alert.timestamp}\n` +
+                `🌐 *Src IP*: ${alert.src_ip}\n` +
+                `🏷️ *Groups*: ${alert.groups}\n` +
+                `📋 *Full Log*: ${alert.full_log}\n` +
+                `🔗 *Link Detail*: ${process.env.LOG_URL}`
+            );
+        } else {
+            console.log("⚠️ False positive detected. Ignoring...");
+        }
+    } else if (count % 5 === 0) {
+        console.log(`🔄 Alert from ${alert.src_ip} triggered ${count} times. Notifying...`);
+        await client.sendMessage(groups.member, 
+            `🔄 Alert from *${alert.src_ip}* triggered ${count} times.`)
+    } else {
+        console.log(`🔄 Alert from ${alert.src_ip} triggered ${count} times.`);
+    }
+}
 
 // Webhook endpoint
-function setupActiveResponseRoutes(client, groups) {
+function setupActiveResponseRoutes(client, groups, io) {
     wazuhRouter.post('/alerts', async (req, res) => {
         try {
             const alert = req.body;
+            let test = {
+                agent: alert.agent.name,
+                description: alert.rule.description,
+                level: alert.rule.level,
+                timestamp: alert.timestamp,
+                src_ip: alert.data.srcip,
+                groups: alert.rule.groups,
+                full_log: alert.full_log
+            };
+
+            // Emit alert to WebSocket clients
+            io.emit('alert', alert);
 
             if (alert.length !== 0) {
-                // Send message to WhatsApp group
-                await client.sendMessage(groups.announcement, 
-                    `🖥️ *Agent*: ${alert.agent.name}\n` +
-                    `📝 *Description*: ${alert.rule.description}\n` + 
-                    `🔔 *Rule Level*: ${alert.rule.level}\n` +
-                    `🕒 *Timestamp*: ${alert.timestamp}\n` +
-                    `🌐 *Src IP*: ${alert.data.srcip}\n` +
-                    `🏷️ *Groups*: ${alert.rule.groups}\n` +
-                    `📋 *Full Log*: ${alert.full_log}\n`
-                );
+                processAlert(test, client, groups);
                 res.status(200).json({ status: 'Alert received successfully' });
             } else {
                 console.warn('Alert content is undefined or null');
@@ -30,17 +123,65 @@ function setupActiveResponseRoutes(client, groups) {
         }
     });
 
+    wazuhRouter.get("/alerts/:ip", async (req, res) => {
+        const key = `alerts:${req.params.ip}`;
+        const alerts = await redisClient.lrange(key, 0, -1);
+        res.json(alerts.map(JSON.parse));
+    });
+    
+    // Root endpoint for testing
+    wazuhRouter.get('/', (req, res) => {
+        res.send('Wazuh webhook receiver is running!');
+    });
+
     return wazuhRouter;
 }
 
-// Root endpoint for testing
-wazuhRouter.get('/', (req, res) => {
-    res.send('Wazuh webhook receiver is running!');
+wazuhRouter.get("/alerts/summary", async (req, res) => {
+    console.log("Fetching all alerts...");
+    const keys = await redisClient.keys("alerts:*");
+    const alerts = [];
+    for (const key of keys) {
+        const alertList = await redisClient.lrange(key, 0, -1);
+        alerts.push(...alertList.map(JSON.parse));
+    }
+    res.json(alerts);
 });
 
 async function handleActiveResponse(client, message, args) {
-    message.reply("No active response available");
-    return;
+    console.log('Summary of alerts...');
+    const keys = await redisClient.keys("alerts:*");
+    if (keys.length > 0) {
+        const alerts = [];
+        for (const key of keys) {
+            const alertList = await redisClient.lrange(key, 0, -1);
+            alerts.push(...alertList.map(JSON.parse));
+        }
+
+        const ipCounts = alerts.reduce((acc, alert) => {
+            if (!acc[alert.src_ip]) {
+                acc[alert.src_ip] = { count: 0, agent: alert.agent, level: alert.level };
+            }
+            acc[alert.src_ip].count += 1;
+            acc[alert.src_ip].level = Math.max(acc[alert.src_ip].level, alert.level); // Keep the highest level
+            return acc;
+        }, {});
+
+        const sortedEntries = Object.entries(ipCounts).sort((a, b) => b[1].count - a[1].count || b[1].level - a[1].level);
+
+        let summaryMessage = 'Summary of alerts\n\n';
+        for (const [ip, data] of sortedEntries) {
+            summaryMessage += `🖥️ *Agent*: ${data.agent}\n`;
+            summaryMessage += `🔔 *Level*: ${data.level}\n`;
+            summaryMessage += `🔄 *Triggered*: ${data.count} times\n`;
+            summaryMessage += `🌐 *IP Address*: ${ip}\n`;
+            summaryMessage += `🔗 *Link Detail*: ${process.env.LOG_URL}/summary\n\n`
+        }
+
+        await message.reply(summaryMessage);
+    } else {
+        await message.reply("No alerts available");
+    }
 }
 
 module.exports = { handleActiveResponse, setupActiveResponseRoutes };

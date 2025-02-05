@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wazuh Alerts</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js" defer></script>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Wazuh Alerts</h1>
+    <input type="text" id="ipInput" placeholder="Enter IP address">
+    <button id="fetchAlertsButton">Fetch Alerts</button>
+    <table>
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Agent</th>
+                <th>Description</th>
+                <th>Level</th>
+                <th>Source IP</th>
+                <th>Groups</th>
+                <th>Full Log</th>
+            </tr>
+        </thead>
+        <tbody id="alertList"></tbody>
+    </table>
+</body>
+</html>
