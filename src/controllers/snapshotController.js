@@ -10,8 +10,8 @@ async function handleSnapshot(client, message, args) {
             message.reply(`Error creating snapshot: ${error.message}`);
             return;
         }
-        logger.info("Successfully created and uploaded snapshot to GCP Cloud Storage.");
-        message.reply("Successfully created and uploaded snapshot to GCP Cloud Storage.");
+        logger.info("Successfully created and uploaded snapshot to Cloud Storage.");
+        message.reply("Successfully created and uploaded snapshot to Cloud Storage.");
     });
 }
 

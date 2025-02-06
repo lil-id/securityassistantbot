@@ -7,6 +7,7 @@ const qrcode = require("qrcode-terminal");
 const bodyParser = require('body-parser');
 const routes = require('./src/routes/index');
 const logger = require('./src/helpers/logger');
+const { exec } = require('child_process');
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const { botAdmins } = require("./src/models/admins/adminModel");
 const { checkRoles } = require("./src/helpers/rolesChecker");
@@ -133,14 +134,18 @@ const groups = {
 };
 
 // Schedule snapshot to run every day at 00:00 AM
-cron.schedule('25 11 * * *', () => {
-    client.sendMessage(groups.member, "Running scheduled system snapshot...");
+cron.schedule('59 23 * * *', () => {
     logger.info('Running scheduled system snapshot...');
+    client.sendMessage(groups.member, "Running scheduled system snapshot...");
     exec('bash src/scripts/systemSnapshot.sh', { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
         if (error) {
             logger.error(`Error creating snapshot: ${error.message}`);
             return;
         }
+        logger.info(`Snapshot stdout: ${stdout}`);
+        logger.error(`Snapshot stderr: ${stderr}`);
+        logger.info("Successfully created and uploaded snapshot to Cloud Storage.");
+        client.sendMessage(groups.member, "Successfully created and uploaded snapshot to Cloud Storage.");
         client.sendMessage(groups.member, "Scheduled system snapshot completed.");
     });
 });
