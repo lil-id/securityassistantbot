@@ -1,4 +1,4 @@
-const { feedBack } = require("../models/feedBackModel");
+const { feedBack } = require('../models/feedBackModel');
 const { checkRoles } = require('../helpers/rolesChecker');
 
 async function handleFeedback(client, message, args) {

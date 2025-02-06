@@ -1,7 +1,7 @@
 const { Router } = require('express');
-const { Server } = require('socket.io');
 const redis = require("ioredis");
 const axios = require("axios");
+const logger = require('../helpers/logger');
 require('dotenv').config();
 
 const wazuhRouter = Router();
@@ -9,6 +9,7 @@ const redisClient = new redis();
 
 // Check if IP is malicious using an external threat intelligence API
 async function checkThreatIntel(ip, retries = 3) {
+    logger.info(`Checking threat intelligence for IP: ${ip}`);
     try {
         const response = await axios.get(`${process.env.ABUSEIPDB_API_URL}/check?ipAddress=${ip}`, {
             headers: { "Key": process.env.ABUSEIPDB_API_KEY },
@@ -18,10 +19,10 @@ async function checkThreatIntel(ip, retries = 3) {
         return response.data.data.abuseConfidenceScore >= 50; // Mark if abuse score is high
     } catch (error) {
         if (error.code === 'ETIMEDOUT' && retries > 0) {
-            console.warn(`Timeout occurred. Retrying... (${retries} retries left)`);
+            logger.warn(`Timeout occurred. Retrying... (${retries} retries left)`);
             return checkThreatIntel(ip, retries - 1);
         }
-        console.error("Threat intelligence check failed");
+        logger.error("Threat intelligence check failed");
         return false;
     }
 }
@@ -43,6 +44,7 @@ async function trackAlert(ip) {
 
 // Store alerts in Redis (TTL: 5 minutes)
 async function storeAlert(alert) {
+    logger.info('Storing alert in Redis');
     const key = `alerts:${alert.src_ip}`;
     await redisClient.rpush(key, JSON.stringify(alert)); // Push alert to list
     await redisClient.expire(key, 300); // Set expiration to 5 minutes
@@ -65,10 +67,10 @@ async function isInteresting(alert) {
 async function processAlert(alert, client, groups) {
     await storeAlert(alert);
     const count = await trackAlert(alert.src_ip);
-    console.log(count === 1 ? "🔍 New alert detected!" : "🔍 Alert already detected. Incrementing count...");
+    logger.info(count === 1 ? "🔍 New alert detected!" : "🔍 Alert already detected. Incrementing count...");
     if (count === 1) {
         if (await isInteresting(alert)) {
-            console.log("🚨 Interesting alert detected! Escalating...");
+            logger.info("🚨 Interesting alert detected! Escalating...");
             // Send message to WhatsApp group
             await client.sendMessage(groups.announcement, 
                 `🖥️ *Agent*: ${alert.agent}\n` +
@@ -81,18 +83,19 @@ async function processAlert(alert, client, groups) {
                 `🔗 *Link Detail*: ${process.env.LOG_URL}`
             );
         } else {
-            console.log("⚠️ False positive detected. Ignoring...");
+            logger.info("⚠️ False positive detected. Ignoring...");
         }
     } else if (count % 5 === 0) {
-        console.log(`🔄 Alert from ${alert.src_ip} triggered ${count} times. Notifying...`);
+        logger.info(`🔄 Alert from ${alert.src_ip} triggered ${count} times. Notifying...`);
         await client.sendMessage(groups.member, 
             `🔄 Alert from *${alert.src_ip}* triggered ${count} times.`)
     } else {
-        console.log(`🔄 Alert from ${alert.src_ip} triggered ${count} times.`);
+        logger.info(`🔄 Alert from ${alert.src_ip} triggered ${count} times.`);
     }
 }
 
 // Webhook endpoint
+// TODO - Implement the webhook endpoint with secret key
 function setupActiveResponseRoutes(client, groups, io) {
     wazuhRouter.post('/alerts', async (req, res) => {
         try {
@@ -114,16 +117,17 @@ function setupActiveResponseRoutes(client, groups, io) {
                 processAlert(test, client, groups);
                 res.status(200).json({ status: 'Alert received successfully' });
             } else {
-                console.warn('Alert content is undefined or null');
+                logger.warn('Alert content is undefined or null');
                 res.status(400).json({ error: 'Alert content is missing' });
             }
         } catch (error) {
-            console.error('Error processing alert:', error);
+            logger.error('Error processing alert:', error);
             res.status(500).json({ error: 'Error processing alert' });
         }
     });
 
     wazuhRouter.get("/alerts/:ip", async (req, res) => {
+        logger.info('Getting alerts for IP:', req.params.ip);
         const key = `alerts:${req.params.ip}`;
         const alerts = await redisClient.lrange(key, 0, -1);
         res.json(alerts.map(JSON.parse));
@@ -138,7 +142,7 @@ function setupActiveResponseRoutes(client, groups, io) {
 }
 
 wazuhRouter.get("/alerts/summary", async (req, res) => {
-    console.log("Fetching all alerts...");
+    logger.info("Fetching all alerts...");
     const keys = await redisClient.keys("alerts:*");
     const alerts = [];
     for (const key of keys) {
@@ -149,7 +153,7 @@ wazuhRouter.get("/alerts/summary", async (req, res) => {
 });
 
 async function handleActiveResponse(client, message, args) {
-    console.log('Summary of alerts...');
+    logger.info('Summary of alerts...');
     const keys = await redisClient.keys("alerts:*");
     if (keys.length > 0) {
         const alerts = [];
@@ -172,7 +176,7 @@ async function handleActiveResponse(client, message, args) {
         let summaryMessage = 'Summary of alerts\n\n';
         for (const [ip, data] of sortedEntries) {
             summaryMessage += `🖥️ *Agent*: ${data.agent}\n`;
-            summaryMessage += `🔔 *Level*: ${data.level}\n`;
+            summaryMessage += `🔔 *Rule Level*: ${data.level}\n`;
             summaryMessage += `🔄 *Triggered*: ${data.count} times\n`;
             summaryMessage += `🌐 *IP Address*: ${ip}\n`;
             summaryMessage += `🔗 *Link Detail*: ${process.env.LOG_URL}/summary\n\n`

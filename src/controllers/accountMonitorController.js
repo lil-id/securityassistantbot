@@ -1,6 +1,6 @@
 const { startAccountMonitoring, stopAccountMonitoring, getAccountDetails, checkAccountChanges } = require("../models/accountMonitor");
 const { formatAccountInfo } = require('../helpers/accountFormatter');
-
+const logger = require("../helpers/logger");
 
 async function handleAccountCheck(client, message, args) {
     try {
@@ -47,12 +47,12 @@ async function handleAccountCheck(client, message, args) {
         if (changes.suspicious.length > 0 && message.from !== message.from) {
             const adminAlert = '🚨 *Suspicious Account Activity Detected*\n\n' +
                              changes.suspicious.map(formatAccountInfo).join('\n');
-            console.log(message.from, adminAlert);
+            logger.info(message.from, adminAlert);
             await client.sendMessage(message.from, adminAlert);
         }
 
     } catch (error) {
-        console.error('Error in handleAccountCheck:', error);
+        logger.error('Error in handleAccountCheck:', error);
         await message.reply('Error checking account status');
     }
 }

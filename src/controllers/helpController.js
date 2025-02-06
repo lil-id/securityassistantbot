@@ -1,6 +1,8 @@
+const logger = require('../helpers/logger');
 const { checkRoles } = require('../helpers/rolesChecker');
 
 async function handleHelp(client, message, args) {
+    logger.info("Help command requested.");
     const getRole = await checkRoles(message.author);
     let helpMessage = "Available commands.\n\n";
 

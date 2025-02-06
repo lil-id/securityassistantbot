@@ -1,4 +1,5 @@
 const { prisma } = require('../helpers/databaseConnection');
+const logger = require('../helpers/logger');
 
 class reportBot {
     static async getUserIds(userPhoneNumbers) {
@@ -20,6 +21,7 @@ class reportBot {
     }
 
     static async createReport(sender, evidence, report) {
+        logger.info('Creating report');
         const userId = await this.getUserIds(sender);
         await prisma.reports.create({
             data: {
@@ -33,6 +35,7 @@ class reportBot {
     }
 
     static async getReports() {
+        logger.info('Getting reports');
         const reports = await prisma.reports.findMany({
             include: {
                 user: {
@@ -57,6 +60,7 @@ class reportBot {
     }
 
     static async getReportById(userPhoneNumbers) {
+        logger.info('Getting reports for:', userPhoneNumbers);
         const userIds = await this.getUserIds(userPhoneNumbers);
         const reports = await prisma.reports.findMany({
             where: {

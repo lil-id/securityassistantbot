@@ -1,17 +1,19 @@
 const { exec } = require("child_process");
+const logger = require("../helpers/logger");
 
 class dockerMonitor {
     // Parse Docker PS Output Function
     static async parseDockerPsOutput(stdout) {
+        logger.info('Parsing docker ps output');
         if (!stdout || stdout.trim() === '') {
-            console.log('No output from docker ps command');
+            logger.info('No output from docker ps command');
             return [];
         }
 
         const lines = stdout.trim().split('\n');
         
         if (lines.length < 2) {
-            console.log('No containers found (only header line or less)');
+            logger.info('No containers found (only header line or less)');
             return [];
         }
 
@@ -23,7 +25,6 @@ class dockerMonitor {
             const headerPositions = [];
             const headers = [];
             let headerPattern = /\s{2,}/g;
-            let match;
             let lastIndex = 0;
             
             // Split headers and get their positions
@@ -64,22 +65,23 @@ class dockerMonitor {
 
             return filteredData;
         } catch (error) {
-            console.error('Error parsing docker ps output:', error);
+            logger.error('Error parsing docker ps output:', error);
             throw error;
         }
     }
 
     // Get Docker Containers Function
     static async getRunningDockerContainers() {
+        logger.info('Getting running Docker containers');
         return new Promise((resolve, reject) => {
             exec('docker ps --filter "status=running"', (error, stdout, stderr) => {
                 if (error) {
-                    console.error(`Error executing docker ps: ${error.message}`);
+                    logger.error(`Error executing docker ps: ${error.message}`);
                     return reject(error);
                 }
                 
                 if (stderr) {
-                    console.error(`Docker command stderr: ${stderr}`);
+                    logger.error(`Docker command stderr: ${stderr}`);
                     return reject(new Error(stderr));
                 }
 
@@ -87,7 +89,7 @@ class dockerMonitor {
                     const jsonData = this.parseDockerPsOutput(stdout);
                     resolve(jsonData);
                 } catch (error) {
-                    console.error('Error parsing docker output:', error);
+                    logger.error('Error parsing docker output:', error);
                     reject(error);
                 }
             });
@@ -95,15 +97,16 @@ class dockerMonitor {
     }
 
     static async getExitedDockerContainers() {
+        logger.info('Getting exited Docker containers');
         return new Promise((resolve, reject) => {
             exec('docker ps --filter "status=exited"', (error, stdout, stderr) => {
                 if (error) {
-                    console.error(`Error executing docker ps: ${error.message}`);
+                    logger.error(`Error executing docker ps: ${error.message}`);
                     return reject(error);
                 }
                 
                 if (stderr) {
-                    console.error(`Docker command stderr: ${stderr}`);
+                    logger.error(`Docker command stderr: ${stderr}`);
                     return reject(new Error(stderr));
                 }
 
@@ -111,7 +114,7 @@ class dockerMonitor {
                     const jsonData = this.parseDockerPsOutput(stdout);
                     resolve(jsonData);
                 } catch (error) {
-                    console.error('Error parsing docker output:', error);
+                    logger.error('Error parsing docker output:', error);
                     reject(error);
                 }
             });
@@ -125,12 +128,13 @@ class dockerMonitor {
             const containerExitedStatus = await this.getExitedDockerContainers();
                     
             if (containerRunningStatus.length === 0) {
-                message.reply("No Docker containers found");
+                logger.info("No running Docker containers found");
+                message.reply("No running Docker containers found");
             } else {
                 // Format the output to be more readable
                 const formattedRunningStatusOutput = containerRunningStatus.map(container => 
                 `*Name*: ${container.NAMES}\n*Status*: ${container.STATUS}\n*Created*: ${container.CREATED}`
-                ).join('\n\n');                    
+                ).join('\n\n');
                 message.reply(`⚡ *Active Containers* ⚡\n\n` + formattedRunningStatusOutput);
 
                 const formattedExitedStatusOutput = containerExitedStatus.map(container => 
@@ -139,7 +143,7 @@ class dockerMonitor {
                 message.reply(`🚨 *Exited Containers* 🚨\n\n` + formattedExitedStatusOutput); 
             }
         } catch (error) {
-            console.error("Error getting container status:", error);
+            logger.error("Error getting container status:", error);
             message.reply(`Error: ${error.message}`);
         }
         // await message.reply('Containers:\nRunning: 25\nStopped: 2\nTotal: 27');

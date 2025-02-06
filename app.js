@@ -1,9 +1,3 @@
-const { Client, LocalAuth } = require("whatsapp-web.js");
-const { botAdmins } = require("./src/models/admins/adminModel");
-const { checkRoles } = require("./src/helpers/rolesChecker");
-const { prisma, checkDatabaseConnection } = require('./src/helpers/databaseConnection');
-const { adminCommands, userCommands } = require('./src/models/commandModel');
-const { Server } = require('socket.io');
 const http = require('http');
 const path = require('path');
 const helmet = require('helmet');
@@ -12,6 +6,13 @@ const cron = require('node-cron');
 const qrcode = require("qrcode-terminal");
 const bodyParser = require('body-parser');
 const routes = require('./src/routes/index');
+const logger = require('./src/helpers/logger');
+const { Client, LocalAuth } = require("whatsapp-web.js");
+const { botAdmins } = require("./src/models/admins/adminModel");
+const { checkRoles } = require("./src/helpers/rolesChecker");
+const { prisma, checkDatabaseConnection } = require('./src/helpers/databaseConnection');
+const { adminCommands, userCommands } = require('./src/models/commandModel');
+const { Server } = require('socket.io');
 
 // Make sure .env values are loaded
 require("dotenv").config();
@@ -48,12 +49,12 @@ const client = new Client({
 // Generate QR code for authentication
 client.on("qr", (qr) => {
     qrcode.generate(qr, { small: true });
-    console.log("QR Code generated. Please scan with WhatsApp.");
+    logger.info("QR Code generated. Please scan with WhatsApp.");
 });
 
 // Check if client is ready
 client.on("ready", async () => {
-    console.log("Client is ready!");
+    logger.info("Client is ready!");
     // Find group IDs
     async function findGroups() {
         const chats = await client.getChats();
@@ -81,14 +82,14 @@ client.on("ready", async () => {
 
     if (existingAdmins.length === 0) {
         await botAdmins.addAdmins([initializeAdmin]);
-        console.log("First admin added to the database.");
+        logger.info("First admin added to the database.");
     } else {
-        console.log("Admin already exists in the database.");
+        logger.info("Admin already exists in the database.");
     }
 
     // Start the Express server after the WhatsApp client is ready
     server.listen(PORT, () => {
-        console.log(`Wazuh webhook receiver listening on port ${PORT}`);
+        logger.info(`Wazuh webhook receiver listening on port ${PORT}`);
     });
 });
 
@@ -125,12 +126,6 @@ client.on("message_create", async (message) => {
     }
 });
 
-// Error handling
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Something went wrong!' });
-});
-
 // Store group IDs
 const groups = {
     announcement: "",
@@ -140,10 +135,10 @@ const groups = {
 // Schedule snapshot to run every day at 00:00 AM
 cron.schedule('25 11 * * *', () => {
     client.sendMessage(groups.member, "Running scheduled system snapshot...");
-    console.log('Running scheduled system snapshot...');
+    logger.info('Running scheduled system snapshot...');
     exec('bash src/scripts/systemSnapshot.sh', { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
         if (error) {
-            console.error(`Error creating snapshot: ${error.message}`);
+            logger.error(`Error creating snapshot: ${error.message}`);
             return;
         }
         client.sendMessage(groups.member, "Scheduled system snapshot completed.");
@@ -157,9 +152,9 @@ routes(app, client, groups, io);
 
 // WebSocket connection
 io.on('connection', (socket) => {
-    console.log('a user connected');
+    logger.info('a user connected');
     socket.on('disconnect', () => {
-        console.log('user disconnected');
+        logger.info('user disconnected');
     });
 });
 
@@ -171,5 +166,11 @@ app.get('/', (req, res) => {
 // Serve summary.html
 app.get('/summary', (req, res) => {
     res.sendFile(path.join(__dirname, 'src/public/summary.html'));
+});
+
+// Error handling
+app.use((err, req, res, next) => {
+    logger.error(err.stack);
+    res.status(500).json({ error: 'Something went wrong!' });
 });
 

@@ -13,7 +13,10 @@ class ollamaModel {
 
     static async isServerRunning() {
       try {
-          const response = await axios.get(`${process.env.OLLAMA_HOST}`);
+          const response = await axios.get(`${process.env.OLLAMA_HOST}`, {
+            timeout: 5000,
+            signal: AbortSignal.timeout(5000)
+        });
           return response.status === 200;
       } catch (error) {
           return false;

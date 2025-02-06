@@ -2,6 +2,7 @@ const { exec } = require('child_process');
 const util = require('util');
 const { alertChecker } = require('../helpers/alertChecker');
 const execPromise = util.promisify(exec);
+const logger = require('../helpers/logger');
 
 // Alert thresholds
 const THRESHOLDS = {
@@ -21,6 +22,7 @@ const THRESHOLDS = {
 
 // Get CPU Usage with threshold check
 async function getCPUUsage() {
+    logger.info('Getting CPU usage');
     try {
         const { stdout } = await execPromise("top -bn1 | grep 'Cpu(s)' | awk '{print $2}'");
         const cpuUsage = parseFloat(stdout);
@@ -32,7 +34,7 @@ async function getCPUUsage() {
             formattedString: `${alertChecker.getAlertEmoji(alertLevel)} *CPU Usage*: ${cpuUsage.toFixed(1)}%`
         };
     } catch (error) {
-        console.error('Error getting CPU usage:', error);
+        logger.error('Error getting CPU usage:', error);
         return {
             value: null,
             alert: 'error',
@@ -43,6 +45,7 @@ async function getCPUUsage() {
 
 // Get Memory Usage with threshold check
 async function getMemoryUsage() {
+    logger.info('Getting Memory usage');
     try {
         const { stdout: totalMem } = await execPromise("free | grep 'Mem:' | awk '{print $2}'");
         const { stdout: usedMem } = await execPromise("free | grep 'Mem:' | awk '{print $3}'");
@@ -65,7 +68,7 @@ async function getMemoryUsage() {
             formattedString: `${alertChecker.getAlertEmoji(alertLevel)} *Memory*: ${parts[2]} used of ${parts[1]} (${percentUsed}%)`
         };
     } catch (error) {
-        console.error('Error getting memory usage:', error);
+        logger.error('Error getting memory usage:', error);
         return {
             value: null,
             alert: 'error',
@@ -76,6 +79,7 @@ async function getMemoryUsage() {
 
 // Get Storage Usage with threshold check
 async function getStorageUsage() {
+    logger.info('Getting Storage usage');
     try {
         const { stdout } = await execPromise("df -h / | tail -n 1");
         const parts = stdout.split(/\s+/);
@@ -91,7 +95,7 @@ async function getStorageUsage() {
             formattedString: `${alertChecker.getAlertEmoji(alertLevel)} *Storage*: ${parts[2]} used of ${parts[1]} (${parts[4]})`
         };
     } catch (error) {
-        console.error('Error getting storage usage:', error);
+        logger.error('Error getting storage usage:', error);
         return {
             value: null,
             alert: 'error',
@@ -102,6 +106,7 @@ async function getStorageUsage() {
 
 // Function to get all system stats with alerts
 async function getSystemStats() {
+    logger.info('Getting system stats');
     try {
         const [cpu, memory, storage] = await Promise.all([
             getCPUUsage(),
@@ -131,7 +136,7 @@ async function getSystemStats() {
             hasAlerts: alerts.length > 0
         };
     } catch (error) {
-        console.error('Error getting system stats:', error);
+        logger.error('Error getting system stats:', error);
         return {
             stats: 'Error reading system statistics',
             alerts: [],
@@ -144,6 +149,7 @@ async function getSystemStats() {
 let monitorInterval = null;
 
 function startMonitoring(client, adminNumber, interval = 5 * 60 * 1000) { // Default 5 minutes
+    logger.info('Starting system monitoring');
     if (monitorInterval) {
         clearInterval(monitorInterval);
     }
@@ -156,12 +162,13 @@ function startMonitoring(client, adminNumber, interval = 5 * 60 * 1000) { // Def
                 await client.sendMessage(adminNumber, alertMessage);
             }
         } catch (error) {
-            console.error('Monitoring error:', error);
+            logger.error('Monitoring error:', error);
         }
     }, interval);
 }
 
 function stopMonitoring() {
+    logger.info('Stopping system monitoring');
     if (monitorInterval) {
         clearInterval(monitorInterval);
         monitorInterval = null;

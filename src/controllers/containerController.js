@@ -1,4 +1,5 @@
-const { dockerMonitor } = require("../../src/models/dockerMonitor");
+const logger = require("../helpers/logger");
+const { dockerMonitor } = require("../models/containerMonitor");
 
 async function handleContainerStatus(client, message, args) {
     const commandOption = args.join(" ");
@@ -7,6 +8,7 @@ async function handleContainerStatus(client, message, args) {
             const containerRunningStatus =
                 await dockerMonitor.getRunningDockerContainers();
             if (containerRunningStatus.length === 0) {
+                logger.info("No active Docker containers found");
                 message.reply("No active Docker containers found");
             } else {
                 const formattedRunningStatusOutput = containerRunningStatus
@@ -24,6 +26,7 @@ async function handleContainerStatus(client, message, args) {
             const containerExitedStatus =
                 await dockerMonitor.getExitedDockerContainers();
             if (containerExitedStatus.length === 0) {
+                logger.info("No exited Docker containers found");
                 message.reply("No exited Docker containers found");
             } else {
                 const formattedExitedStatusOutput = containerExitedStatus
@@ -44,7 +47,7 @@ async function handleContainerStatus(client, message, args) {
             return;
         }
     } catch (error) {
-        console.error("Error getting container status:", error);
+        logger.error("Error getting container status:", error);
         message.reply(`Error: ${error.message}`);
     }
 }

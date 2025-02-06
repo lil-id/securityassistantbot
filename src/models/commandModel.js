@@ -1,16 +1,16 @@
-const { handleAddAICommand } = require('../controllers/ai/ollamaController');
-const { handleAddAdminCommand } = require('../controllers/admins/addAdminController');
-const { handleAddUserCommand } = require('../controllers/users/addUserController');
-const { handleServerStatus, handleMonitorCommand, handleThresholdCommand } = require('../controllers/systemMonitorController');
-const { handleAccountCheck, handleAccountMonitorCommand } = require('../controllers/accountMonitorController');
-const { handleContainerStatus } = require('../controllers/containerController');
-const { handleSnapshot } = require('../controllers/snapshotController');
-const { handleActiveResponse } = require('../controllers/activeResponseController');
-const { handleFeedback } = require('../controllers/feedbackController');
-const { handleReport } = require('../controllers/reportController');
 const { handleHelp } = require('../controllers/helpController');
 const { handleInfo } = require('../controllers/infoController');
+const { handleReport } = require('../controllers/reportController');
+const { handleSnapshot } = require('../controllers/snapshotController');
+const { handleFeedback } = require('../controllers/feedbackController');
+const { handleAddAICommand } = require('../controllers/ai/ollamaController');
 const { handleBotTermination } = require('../controllers/handleBotTermination');
+const { handleContainerStatus } = require('../controllers/containerController');
+const { handleAddUserCommand } = require('../controllers/users/addUserController');
+const { handleActiveResponse } = require('../controllers/activeResponseController');
+const { handleAddAdminCommand } = require('../controllers/admins/addAdminController');
+const { handleAccountCheck, handleAccountMonitorCommand } = require('../controllers/accountMonitorController');
+const { handleServerStatus, handleMonitorCommand, handleThresholdCommand } = require('../controllers/systemMonitorController');
 
 const adminCommands = {
     "!admin": handleAddAdminCommand,

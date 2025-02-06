@@ -1,7 +1,10 @@
 const util = require('util');
+const logger = require('../helpers/logger');
 const { exec } = require('child_process');
-const execPromise = util.promisify(exec);
 const { formatAccountInfo } = require('../helpers/accountFormatter');
+
+// Promisify exec function
+const execPromise = util.promisify(exec);
 
 // Store previous account state
 let previousAccounts = new Map();
@@ -63,6 +66,7 @@ class UserAccount {
 // Get detailed account information
 async function getAccountDetails() {
     try {
+        logger.info('Getting account details...');
         // Get all users from /etc/passwd
         const { stdout: passwdContent } = await execPromise('cat /etc/passwd');
         const { stdout: shadowLastLogin } = await execPromise('last -n 50');
@@ -124,13 +128,14 @@ async function getAccountDetails() {
 
         return accounts;
     } catch (error) {
-        console.error('Error getting account details:', error);
+        logger.error('Error getting account details:', error);
         throw error;
     }
 }
 
 // Check for account changes
 async function checkAccountChanges(currentAccounts) {
+    logger.info('Getting account changes...');
     const changes = {
         added: [],
         removed: [],
@@ -182,6 +187,7 @@ async function checkAccountChanges(currentAccounts) {
 let accountMonitorInterval = null;
 
 function startAccountMonitoring(client, adminNumber, interval = 15 * 60 * 1000) { // Default 15 minutes
+    logger.info('Starting account monitoring...');
     if (accountMonitorInterval) {
         clearInterval(accountMonitorInterval);
     }
@@ -212,12 +218,13 @@ function startAccountMonitoring(client, adminNumber, interval = 15 * 60 * 1000) 
                 await client.sendMessage(adminNumber, alertMessage);
             }
         } catch (error) {
-            console.error('Account monitoring error:', error);
+            logger.error('Account monitoring error:', error);
         }
     }, interval);
 }
 
 function stopAccountMonitoring() {
+    logger.info('Stopping account monitoring...');
     if (accountMonitorInterval) {
         clearInterval(accountMonitorInterval);
         accountMonitorInterval = null;

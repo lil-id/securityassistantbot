@@ -1,4 +1,5 @@
 const { prisma } = require('../helpers/databaseConnection');
+const logger = require('../helpers/logger');
 
 class feedBack {
     static async getUserIds(userPhoneNumbers) {
@@ -20,6 +21,7 @@ class feedBack {
     }
 
     static async createFeedback(sender, feedback) {
+        logger.info('Creating feedback');
         const userId = await this.getUserIds(sender);
         await prisma.feedbacks.create({
             data: {
@@ -32,6 +34,7 @@ class feedBack {
     }
 
     static async getFeedbacks() {
+        logger.info('Getting feedbacks');
         const feedbacks = await prisma.feedbacks.findMany({
             include: {
                 user: {
@@ -56,6 +59,7 @@ class feedBack {
     }
 
     static async getFeedbackById(userPhoneNumbers) {
+        logger.info('Getting feedbacks for:', userPhoneNumbers);
         const userIds = await this.getUserIds(userPhoneNumbers);
         const feedbacks = await prisma.feedbacks.findMany({
             where: {
