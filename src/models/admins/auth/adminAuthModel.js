@@ -1,6 +1,6 @@
-const handleValidationErrors = require("../../helpers/handleValidationError");
+const handleValidationErrors = require("../../../helpers/handleValidationError");
 const jwt = require('jsonwebtoken');
-const { prisma } = require('../../helpers/databaseConnection');
+const { prisma } = require('../../../helpers/databaseConnection');
 const Joi = require('joi');
 require('dotenv').config();
 
@@ -22,13 +22,13 @@ class Authentication {
             if (validation.error)
                 return handleValidationErrors(validation.error);
 
-            const users = await prisma.users.findUnique({
+            const admins = await prisma.admins.findUnique({
                 where: {
                     numberPhone: `${body.numberPhone}@c.us`,
                 },
                 select: {
                     id: true,
-                    JWTAccessTokenUsers: {
+                    JWTAccessTokenAdmins: {
                         select: {
                             id: true,
                             token: true,
@@ -38,7 +38,7 @@ class Authentication {
                 }
             });
 
-            if (!users) {
+            if (!admins) {
                 return {
                     status: false,
                     message: "failed",
@@ -48,11 +48,11 @@ class Authentication {
             }
 
             // Check JWT token if not exist
-            if (!users.JWTAccessTokenUsers) {
+            if (!admins.JWTAccessTokenAdmins) {
                 const saveAccessToken =
-                    await prisma.jWTAccessTokenUsers.create({
+                    await prisma.jWTAccessTokenAdmins.create({
                         data: {
-                            idUser: users.id,
+                            idAdmin: admins.id,
                             token: "",
                         },
                     });
@@ -69,7 +69,7 @@ class Authentication {
                     currentDate.getTime() + 7 * 24 * 60 * 60 * 1000
                 );
 
-                await prisma.jWTAccessTokenUsers.update({
+                await prisma.jWTAccessTokenAdmins.update({
                     where: {
                         id: payload.id,
                     },
@@ -88,10 +88,10 @@ class Authentication {
             }
 
             // check if token expired
-            let { token } = users.JWTAccessTokenUsers;
+            let { token } = admins.JWTAccessTokenAdmins;
 
             const decodedToken = jwt.decode(
-                users.JWTAccessTokenUsers.token
+                admins.JWTAccessTokenAdmins.token
             );
 
             if (!decodedToken) {
@@ -99,10 +99,10 @@ class Authentication {
             }
 
             if (decodedToken.exp * 1000 <= new Date().getTime()) {
-                const idJwtAccessTokenUsers = decodedToken.id;
+                const idJwtAccessTokenAdmins = decodedToken.id;
 
                 const payload = {
-                    id: users.JWTAccessTokenUsers.id,
+                    id: admins.JWTAccessTokenAdmins.id,
                 };
 
                 token = jwt.sign(payload, process.env.TOKEN_CODE || "", {
@@ -113,9 +113,9 @@ class Authentication {
                     currentDate.getTime() + 7 * 24 * 60 * 60 * 1000
                 );
 
-                await prisma.jWTAccessTokenUsers.update({
+                await prisma.jWTAccessTokenAdmins.update({
                     where: {
-                        id: idJwtAccessTokenUsers,
+                        id: idJwtAccessTokenAdmins,
                     },
                     data: {
                         token,
@@ -135,10 +135,10 @@ class Authentication {
                 status: true,
                 message: "success",
                 code: 200,
-                users
+                admins
             };
         } catch (error) {
-            console.error("Users login module error", error);
+            console.error("Admins login module error", error);
 
             return {
                 status: false,
@@ -149,11 +149,11 @@ class Authentication {
         }
     };
 
-    logout = async (idUser) => {
+    logout = async (idAdmin) => {
         try {
-            await prisma.jWTAccessTokenUsers.delete({
+            await prisma.jWTAccessTokenAdmins.delete({
                 where: {
-                    idUser
+                    idAdmin
                 },
             });
 
@@ -163,7 +163,7 @@ class Authentication {
                 code: 200,
             };
         } catch (error) {
-            console.error("Users logout module error", error);
+            console.error("Admins logout module error", error);
 
             return {
                 status: false,
