@@ -14,25 +14,27 @@ datasource db {
 }
 
 model Admins {
-  id                Int                 @id @default(autoincrement())
-  role              UserRoles           @default(admin)
-  name              String?
-  numberPhone       String              @unique
-  createdAt         DateTime            @default(now())
-  AdminActicitylogs AdminActicitylogs[]
+  id                   Int                   @id @default(autoincrement())
+  role                 UserRoles             @default(admin)
+  name                 String?
+  numberPhone          String                @unique
+  createdAt            DateTime              @default(now())
+  AdminActicitylogs    AdminActicitylogs[]
+  JWTAccessTokenAdmins JWTAccessTokenAdmins?
 
   @@map("admins")
 }
 
 model Users {
-  id               Int                @id @default(autoincrement())
-  role             UserRoles          @default(user)
-  name             String?
-  numberPhone      String             @unique
-  createdAt        DateTime           @default(now())
-  Feedbacks        Feedbacks[]
-  Reports          Reports[]
-  UserActicitylogs UserActicitylogs[]
+  id                  Int                  @id @default(autoincrement())
+  role                UserRoles            @default(user)
+  name                String?
+  numberPhone         String               @unique
+  createdAt           DateTime             @default(now())
+  Feedbacks           Feedbacks[]
+  Reports             Reports[]
+  UserActicitylogs    UserActicitylogs[]
+  JWTAccessTokenUsers JWTAccessTokenUsers?
 
   @@map("users")
 }
@@ -80,6 +82,30 @@ model UserActicitylogs {
   createdAt DateTime @default(now())
 
   @@map("useracticitylogs")
+}
+
+model JWTAccessTokenAdmins {
+  id        String    @id @default(uuid())
+  idAdmin   Int       @unique
+  token     String    @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  expiredIn DateTime?
+  Admins    Admins    @relation(fields: [idAdmin], references: [id], onDelete: Cascade)
+
+  @@map("jwtaccesstokenadmins")
+}
+
+model JWTAccessTokenUsers {
+  id        String    @id @default(uuid())
+  idUser    Int       @unique
+  token     String    @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  expiredIn DateTime?
+  Users     Users     @relation(fields: [idUser], references: [id], onDelete: Cascade)
+
+  @@map("jwtaccesstokenusers")
 }
 
 enum UserRoles {

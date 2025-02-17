@@ -26,6 +26,8 @@
     "express": "^4.21.2",
     "helmet": "^8.0.0",
     "ioredis": "^5.4.2",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.3",
     "ollama": "^0.5.11",
     "qrcode-terminal": "^0.12.0",

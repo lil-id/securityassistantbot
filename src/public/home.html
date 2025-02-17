@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wazuh Alerts Summary</title>
+    <title>Wazuh Alerts</title>
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="summary.js" defer></script>
+    <script src="home.js" defer></script>
     <style>
         table {
             width: 100%;
@@ -20,21 +20,33 @@
         th {
             background-color: #f2f2f2;
         }
+        #recommendationBox {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <h1>Wazuh Alerts Summary</h1>
-    <p>* 5 Minutes Ago</p>
+    <h1>Wazuh Alerts</h1>
+    <div id="recommendationBox"></div>
+    <input type="text" id="ipInput" placeholder="Enter IP address">
+    <button id="fetchAlertsButton">Fetch Alerts</button>
+    <button id="getRecommendationButton">Get Security Recommendation</button>
     <table>
         <thead>
             <tr>
-                <th>IP Address</th>
-                <th>Triggered</th>
+                <th>Timestamp</th>
                 <th>Agent</th>
+                <th>Description</th>
                 <th>Level</th>
+                <th>Source IP</th>
+                <th>Groups</th>
+                <th>Full Log</th>
             </tr>
         </thead>
-        <tbody id="summaryList"></tbody>
+        <tbody id="alertList"></tbody>
     </table>
 </body>
 </html>

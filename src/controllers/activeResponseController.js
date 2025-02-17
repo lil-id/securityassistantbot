@@ -47,7 +47,7 @@ async function storeAlert(alert) {
     logger.info('Storing alert in Redis');
     const key = `alerts:${alert.src_ip}`;
     await redisClient.rpush(key, JSON.stringify(alert)); // Push alert to list
-    await redisClient.expire(key, 300); // Set expiration to 5 minutes
+    await redisClient.expire(key, 600); // Set expiration to 5 minutes
 }
 
 // Determine if an alert is interesting
@@ -100,7 +100,7 @@ function setupActiveResponseRoutes(client, groups, io) {
     wazuhRouter.post('/alerts', async (req, res) => {
         try {
             const alert = req.body;
-            let test = {
+            let reformatAlert = {
                 agent: alert.agent.name,
                 description: alert.rule.description,
                 level: alert.rule.level,
@@ -114,7 +114,7 @@ function setupActiveResponseRoutes(client, groups, io) {
             io.emit('alert', alert);
 
             if (alert.length !== 0) {
-                processAlert(test, client, groups);
+                processAlert(reformatAlert, client, groups);
                 res.status(200).json({ status: 'Alert received successfully' });
             } else {
                 logger.warn('Alert content is undefined or null');
@@ -127,7 +127,7 @@ function setupActiveResponseRoutes(client, groups, io) {
     });
 
     wazuhRouter.get("/alerts/:ip", async (req, res) => {
-        logger.info('Getting alerts for IP:', req.params.ip);
+        logger.info(`Getting alerts for IP: ${req.params.ip}`);
         const key = `alerts:${req.params.ip}`;
         const alerts = await redisClient.lrange(key, 0, -1);
         res.json(alerts.map(JSON.parse));

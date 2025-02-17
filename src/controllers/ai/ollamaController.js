@@ -1,5 +1,8 @@
 const { ollamaModel } = require("../../models/ai/ollamaModel");
+const { Router } = require('express');
 const logger = require("../../helpers/logger");
+
+const ollamaRouter = Router();
 
 async function handleAddAICommand(client, message, args) {
     const content = args.join(" ");
@@ -8,7 +11,7 @@ async function handleAddAICommand(client, message, args) {
     if (!isRunning) {
         logger.info("AI server is not running.");
         await message.reply("AI server is not running.");
-        return;
+        return res.status(503).send("AI server is not running.");;
     }
 
     logger.info("Asking AI...");
@@ -17,4 +20,19 @@ async function handleAddAICommand(client, message, args) {
     await message.reply(response);
 }
 
-module.exports = { handleAddAICommand };
+async function handleSecurityRecommendation(req, res) {
+    const { fullLogs } = req.body;
+    const isRunning = await ollamaModel.isServerRunning();
+
+    if (!isRunning) {
+        logger.info("AI server is not running.");
+        return res.status(503).send("AI server is not running.");
+    }
+
+    logger.info("Asking AI for security recommendation...");
+    const response = await ollamaModel.sendPrompt(`Provide security recommendations based on the following logs:\n${fullLogs}`);
+    console.log(response);
+    res.send(response);
+}
+
+module.exports = { handleAddAICommand, handleSecurityRecommendation };

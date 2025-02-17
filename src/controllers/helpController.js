@@ -12,8 +12,8 @@ async function handleHelp(client, message, args) {
         helpMessage += "!admin - Added new admin\n";
         helpMessage += "!user - Added new member\n";
         helpMessage += "!server - Check server status\n";
-        helpMessage += "!monitor - Start monitoring server\n";
-        helpMessage += "!threshold - Configure threshold\n";
+        // helpMessage += "!monitor - Start monitoring server\n";
+        // helpMessage += "!threshold - Configure threshold\n";
         helpMessage += "!account - Check server accounts\n";
         helpMessage += "!container - Check container status\n";
         helpMessage += "!snap - Create snapshot\n";

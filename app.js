@@ -157,7 +157,7 @@ routes(app, client, groups, io);
 
 // WebSocket connection
 io.on('connection', (socket) => {
-    logger.info('a user connected');
+    logger.info('user connected');
     socket.on('disconnect', () => {
         logger.info('user disconnected');
     });
