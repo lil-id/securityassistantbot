@@ -12,7 +12,7 @@ class Authentication {
             const schema = Joi.object({
                 numberPhone: Joi.string()
                     .min(10)
-                    .max(12)
+                    .max(13)
                     .pattern(/^[0-9]/)
                     .required(),
             });
@@ -43,7 +43,7 @@ class Authentication {
                     status: false,
                     message: "failed",
                     code: 404,
-                    error: "Login failed. Invalid email or password.",
+                    error: "Number phone not found.",
                 };
             }
 
@@ -79,11 +79,15 @@ class Authentication {
                     },
                 });
 
+                const data = {
+                    token
+                }
+
                 return {
                     status: true,
                     message: "success",
                     code: 200,
-                    token,
+                    data,
                 };
             }
 
@@ -123,19 +127,27 @@ class Authentication {
                     },
                 });
 
+                const data = {
+                    token
+                }
+
                 return {
                     status: true,
                     message: "success",
                     code: 200,
-                    token
+                    data
                 };
+            }
+
+            const data = {
+                token: users.JWTAccessTokenUsers.token
             }
 
             return {
                 status: true,
                 message: "success",
                 code: 200,
-                users
+                data
             };
         } catch (error) {
             console.error("Users login module error", error);

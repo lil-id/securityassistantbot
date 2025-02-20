@@ -12,7 +12,7 @@ class Authentication {
             const schema = Joi.object({
                 numberPhone: Joi.string()
                     .min(10)
-                    .max(12)
+                    .max(13)
                     .pattern(/^[0-9]/)
                     .required(),
             });
@@ -41,9 +41,9 @@ class Authentication {
             if (!admins) {
                 return {
                     status: false,
-                    message: "failed",
                     code: 404,
-                    error: "Login failed. Invalid email or password.",
+                    message: "failed",
+                    error: "Number phone not found.",
                 };
             }
 
@@ -79,11 +79,15 @@ class Authentication {
                     },
                 });
 
+                const data = {
+                    token
+                }
+
                 return {
                     status: true,
-                    message: "success",
                     code: 200,
-                    token,
+                    message: "success",
+                    data,
                 };
             }
 
@@ -123,27 +127,35 @@ class Authentication {
                     },
                 });
 
+                const data = {
+                    token
+                }
+
                 return {
                     status: true,
-                    message: "success",
                     code: 200,
-                    token
+                    message: "success",
+                    data
                 };
+            }
+
+            const data = {
+                token: admins.JWTAccessTokenAdmins.token
             }
 
             return {
                 status: true,
-                message: "success",
                 code: 200,
-                admins
+                message: "success",
+                data
             };
         } catch (error) {
             console.error("Admins login module error", error);
 
             return {
                 status: false,
-                message: "failed",
                 code: 400,
+                message: "failed",
                 error,
             };
         }

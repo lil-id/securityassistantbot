@@ -2,6 +2,8 @@ const { Router } = require('express');
 const redis = require("ioredis");
 const axios = require("axios");
 const logger = require('../helpers/logger');
+const userSession = require('../middleware/usersMiddleware');
+const adminSession = require('../middleware/adminsMiddleware');
 require('dotenv').config();
 
 const wazuhRouter = Router();
@@ -97,7 +99,7 @@ async function processAlert(alert, client, groups) {
 // Webhook endpoint
 // TODO - Implement the webhook endpoint with secret key
 function setupActiveResponseRoutes(client, groups, io) {
-    wazuhRouter.post('/alerts', async (req, res) => {
+    wazuhRouter.post('/alerts', adminSession || userSession, async (req, res) => {
         try {
             const alert = req.body;
             let reformatAlert = {
@@ -126,7 +128,7 @@ function setupActiveResponseRoutes(client, groups, io) {
         }
     });
 
-    wazuhRouter.get("/alerts/:ip", async (req, res) => {
+    wazuhRouter.get("/alerts/:ip", adminSession || userSession, async (req, res) => {
         logger.info(`Getting alerts for IP: ${req.params.ip}`);
         const key = `alerts:${req.params.ip}`;
         const alerts = await redisClient.lrange(key, 0, -1);
@@ -141,7 +143,7 @@ function setupActiveResponseRoutes(client, groups, io) {
     return wazuhRouter;
 }
 
-wazuhRouter.get("/alerts/summary", async (req, res) => {
+wazuhRouter.get("/alerts/summary", adminSession || userSession, async (req, res) => {
     logger.info("Fetching all alerts...");
     const keys = await redisClient.keys("alerts:*");
     const alerts = [];

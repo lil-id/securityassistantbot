@@ -1,19 +1,24 @@
-const http = require('http');
-const path = require('path');
-const helmet = require('helmet');
-const express = require('express');
-const cron = require('node-cron');
+const http = require("http");
+const path = require("path");
+const cors = require("cors");
+const helmet = require("helmet");
+const express = require("express");
+const cron = require("node-cron");
 const qrcode = require("qrcode-terminal");
-const bodyParser = require('body-parser');
-const routes = require('./src/routes/index');
-const logger = require('./src/helpers/logger');
-const { exec } = require('child_process');
+const bodyParser = require("body-parser");
+const routes = require("./src/routes/index");
+const logger = require("./src/helpers/logger");
+const { exec } = require("child_process");
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const { botAdmins } = require("./src/models/admins/adminModel");
 const { checkRoles } = require("./src/helpers/rolesChecker");
-const { prisma, checkDatabaseConnection } = require('./src/helpers/databaseConnection');
-const { adminCommands, userCommands } = require('./src/models/commandModel');
-const { Server } = require('socket.io');
+const {
+    prisma,
+    checkDatabaseConnection,
+} = require("./src/helpers/databaseConnection");
+const { adminCommands, userCommands } = require("./src/models/commandModel");
+const { Server } = require("socket.io");
+const { startCronJob } = require("./src/controllers/snapshotController");
 
 // Make sure .env values are loaded
 require("dotenv").config();
@@ -26,18 +31,29 @@ const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
         origin: "*",
-        methods: ["GET", "POST"]
-    }
+        methods: ["GET", "POST"],
+    },
 });
 
 const PORT = process.env.PORT || 3000;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
 // Middleware
-app.use(helmet());
+app.use(
+    cors({
+        origin: "*",
+        methods: ["GET", "POST"],
+        credentials: true, // Enable cookies if needed
+    })
+);
+app.use(
+    helmet({
+        contentSecurityPolicy: false,
+    })
+);
 app.use(bodyParser.json());
-app.set('trust proxy', true);
-app.use(express.static(path.join(__dirname, 'src/public')));
+app.set("trust proxy", true);
+app.use(express.static(path.join(__dirname, "src/public")));
 
 // Initialize WhatsApp client
 const client = new Client({
@@ -52,6 +68,15 @@ client.on("qr", (qr) => {
     qrcode.generate(qr, { small: true });
     logger.info("QR Code generated. Please scan with WhatsApp.");
 });
+
+// Store group IDs
+const groups = {
+    announcement: "",
+    member: "",
+};
+
+// Variable to store the cron schedule
+let cronSchedule = "59 23 * * *";
 
 // Check if client is ready
 client.on("ready", async () => {
@@ -88,6 +113,21 @@ client.on("ready", async () => {
         logger.info("Admin already exists in the database.");
     }
 
+    // Load the cron schedule from the database
+    const cronJobSchedule = await prisma.cronJobsSchedule.findUnique({
+        where: { id: 1 },
+    });
+
+    // Default schedule is every day at 23:59
+    let cronSchedule = "59 23 * * *";
+    if (cronJobSchedule) {
+        cronSchedule = `${cronJobSchedule.hour} ${cronJobSchedule.dayOfMonth} ${cronJobSchedule.month} ${cronJobSchedule.dayOfWeek}`;
+    }
+
+    // Start the initial cron job
+    startCronJob(cronSchedule, client, groups);
+    logger.info("Initial cron job started.");
+
     // Start the Express server after the WhatsApp client is ready
     server.listen(PORT, () => {
         logger.info(`Wazuh webhook receiver listening on port ${PORT}`);
@@ -96,7 +136,8 @@ client.on("ready", async () => {
 
 // Message handler
 client.on("message_create", async (message) => {
-    const content = typeof message.body === 'string' ? message.body.replace(/\*/g, "") : '';
+    const content =
+        typeof message.body === "string" ? message.body.replace(/\*/g, "") : "";
 
     // Check if it's a command (starts with !)
     if (!content.startsWith("!")) return;
@@ -127,27 +168,33 @@ client.on("message_create", async (message) => {
     }
 });
 
-// Store group IDs
-const groups = {
-    announcement: "",
-    member: "",
-};
-
 // Schedule snapshot to run every day at 00:00 AM
-cron.schedule('59 23 * * *', () => {
-    logger.info('Running scheduled system snapshot...');
+cron.schedule("59 23 * * *", () => {
+    logger.info("Running scheduled system snapshot...");
     client.sendMessage(groups.member, "Running scheduled system snapshot...");
-    exec('bash src/scripts/systemSnapshot.sh', { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
-        if (error) {
-            logger.error(`Error creating snapshot: ${error.message}`);
-            return;
+    exec(
+        "bash src/scripts/systemSnapshot.sh",
+        { maxBuffer: 1024 * 1024 * 10 },
+        (error, stdout, stderr) => {
+            if (error) {
+                logger.error(`Error creating snapshot: ${error.message}`);
+                return;
+            }
+            logger.info(`Snapshot stdout: ${stdout}`);
+            logger.error(`Snapshot stderr: ${stderr}`);
+            logger.info(
+                "Successfully created and uploaded snapshot to Cloud Storage."
+            );
+            client.sendMessage(
+                groups.member,
+                "Successfully created and uploaded snapshot to Cloud Storage."
+            );
+            client.sendMessage(
+                groups.member,
+                "Scheduled system snapshot completed."
+            );
         }
-        logger.info(`Snapshot stdout: ${stdout}`);
-        logger.error(`Snapshot stderr: ${stderr}`);
-        logger.info("Successfully created and uploaded snapshot to Cloud Storage.");
-        client.sendMessage(groups.member, "Successfully created and uploaded snapshot to Cloud Storage.");
-        client.sendMessage(groups.member, "Scheduled system snapshot completed.");
-    });
+    );
 });
 
 // Initialize the client
@@ -156,26 +203,29 @@ client.initialize();
 routes(app, client, groups, io);
 
 // WebSocket connection
-io.on('connection', (socket) => {
-    logger.info('user connected');
-    socket.on('disconnect', () => {
-        logger.info('user disconnected');
+io.on("connection", (socket) => {
+    logger.info("user connected");
+    socket.on("disconnect", () => {
+        logger.info("user disconnected");
     });
 });
 
 // Serve index.html
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'src/public/index.html'));
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "src/public/html/index.html"));
+});
+
+app.get("/dashboard", (req, res) => {
+    res.sendFile(path.join(__dirname, "src/public/html/home.html"));
 });
 
 // Serve summary.html
-app.get('/summary', (req, res) => {
-    res.sendFile(path.join(__dirname, 'src/public/summary.html'));
+app.get("/summary", (req, res) => {
+    res.sendFile(path.join(__dirname, "src/public/html/summary.html"));
 });
 
 // Error handling
 app.use((err, req, res, next) => {
     logger.error(err.stack);
-    res.status(500).json({ error: 'Something went wrong!' });
+    res.status(500).json({ error: "Something went wrong!" });
 });
-

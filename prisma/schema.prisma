@@ -25,6 +25,29 @@ model Admins {
   @@map("admins")
 }
 
+model JWTAccessTokenAdmins {
+  id        String    @id @default(uuid())
+  idAdmin   Int       @unique
+  token     String    @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  expiredIn DateTime?
+  Admins    Admins    @relation(fields: [idAdmin], references: [id], onDelete: Cascade)
+
+  @@map("jwtaccesstokenadmins")
+}
+
+model AdminActicitylogs {
+  id        Int      @id @default(autoincrement())
+  admin     Admins?  @relation(fields: [idAdmin], references: [id], onDelete: SetNull)
+  idAdmin   Int?
+  name      String?
+  activity  String?
+  createdAt DateTime @default(now())
+
+  @@map("adminacticitylogs")
+}
+
 model Users {
   id                  Int                  @id @default(autoincrement())
   role                UserRoles            @default(user)
@@ -37,6 +60,29 @@ model Users {
   JWTAccessTokenUsers JWTAccessTokenUsers?
 
   @@map("users")
+}
+
+model UserActicitylogs {
+  id        Int      @id @default(autoincrement())
+  user      Users?   @relation(fields: [idUser], references: [id], onDelete: SetNull)
+  idUser    Int?
+  name      String?
+  activity  String?
+  createdAt DateTime @default(now())
+
+  @@map("useracticitylogs")
+}
+
+model JWTAccessTokenUsers {
+  id        String    @id @default(uuid())
+  idUser    Int       @unique
+  token     String    @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  expiredIn DateTime?
+  Users     Users     @relation(fields: [idUser], references: [id], onDelete: Cascade)
+
+  @@map("jwtaccesstokenusers")
 }
 
 model Reports {
@@ -62,50 +108,14 @@ model Feedbacks {
   @@map("feedbacks")
 }
 
-model AdminActicitylogs {
-  id        Int      @id @default(autoincrement())
-  admin     Admins?  @relation(fields: [idAdmin], references: [id], onDelete: SetNull)
-  idAdmin   Int?
-  name      String?
-  activity  String?
-  createdAt DateTime @default(now())
+model CronJobsSchedule {
+  id         Int     @id @default(autoincrement())
+  hour       String?
+  dayOfMonth String?
+  dayOfWeek  String?
+  month      String?
 
-  @@map("adminacticitylogs")
-}
-
-model UserActicitylogs {
-  id        Int      @id @default(autoincrement())
-  user      Users?   @relation(fields: [idUser], references: [id], onDelete: SetNull)
-  idUser    Int?
-  name      String?
-  activity  String?
-  createdAt DateTime @default(now())
-
-  @@map("useracticitylogs")
-}
-
-model JWTAccessTokenAdmins {
-  id        String    @id @default(uuid())
-  idAdmin   Int       @unique
-  token     String    @db.Text
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  expiredIn DateTime?
-  Admins    Admins    @relation(fields: [idAdmin], references: [id], onDelete: Cascade)
-
-  @@map("jwtaccesstokenadmins")
-}
-
-model JWTAccessTokenUsers {
-  id        String    @id @default(uuid())
-  idUser    Int       @unique
-  token     String    @db.Text
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  expiredIn DateTime?
-  Users     Users     @relation(fields: [idUser], references: [id], onDelete: Cascade)
-
-  @@map("jwtaccesstokenusers")
+  @@map("cronjobsschedule")
 }
 
 enum UserRoles {
