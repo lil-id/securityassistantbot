@@ -118,7 +118,7 @@ client.on("ready", async () => {
     // Default schedule is every day at 23:59
     let cronSchedule = "59 23 * * *";
     if (cronJobSchedule) {
-        cronSchedule = `${cronJobSchedule.hour} ${cronJobSchedule.dayOfMonth} ${cronJobSchedule.month} ${cronJobSchedule.dayOfWeek}`;
+        cronSchedule = `${cronJobSchedule.hourMinute} ${cronJobSchedule.dayOfMonth} ${cronJobSchedule.month} ${cronJobSchedule.dayOfWeek}`;
     }
 
     // Start the initial cron job
