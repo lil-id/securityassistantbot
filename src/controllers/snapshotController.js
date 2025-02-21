@@ -38,67 +38,77 @@ function startCronJob(schedule, client, groups) {
 }
 
 async function handleSnapshot(client, message, args, groups, cronJob) {
-    logger.info("Creating system snapshot...");
-    await message.reply("Creating system snapshot...");
-    exec(
-        "bash src/scripts/systemSnapshot.sh",
-        { maxBuffer: 1024 * 1024 * 10 },
-        (error, stdout, stderr) => {
-            if (error) {
-                logger.error(`Error creating snapshot: ${error.message}`);
-                message.reply(`Error creating snapshot: ${error.message}`);
-                return;
+    if (args.length === 0) {
+        logger.info("Creating system snapshot...");
+        await message.reply("Creating system snapshot...");
+        exec(
+            "bash src/scripts/systemSnapshot.sh",
+            { maxBuffer: 1024 * 1024 * 10 },
+            (error, stdout, stderr) => {
+                if (error) {
+                    logger.error(`Error creating snapshot: ${error.message}`);
+                    message.reply(`Error creating snapshot: ${error.message}`);
+                    return;
+                }
+                logger.info(
+                    "Successfully created and uploaded snapshot to Cloud Storage."
+                );
+                message.reply(
+                    "Successfully created and uploaded snapshot to Cloud Storage."
+                );
             }
+        );
+    } else if (args.length >= 1 && args.length <= 6) {
+        const newSchedule = args.map(part => part === '' ? '*' : part).join(' ');
+        try {
+            // Validate the new cron schedule
+            cron.validate(newSchedule);
+
+            // Stop the existing cron job
+            cronJob.stop();
+
+            // Start a new cron job with the new schedule
+            cronJob = startCronJob(newSchedule, client, groups);
+
+            // Parse the cron schedule
+            const [minute, hour, dayOfMonth, month, dayOfWeek] =
+                newSchedule.split(" ");
+
+            // Store the new cron schedule in the database
+            await prisma.cronJobsSchedule.upsert({
+                where: { id: 1 },
+                update: {
+                    hourMinute: `${minute} ${hour}`,
+                    dayOfMonth,
+                    month,
+                    dayOfWeek,
+                },
+                create: {
+                    id: 1,
+                    hourMinute: `${minute} ${hour}`,
+                    dayOfMonth,
+                    month,
+                    dayOfWeek,
+                },
+            });
+
             logger.info(
-                "Successfully created and uploaded snapshot to Cloud Storage."
+                `Cron schedule successfully updated to: ${newSchedule}`
             );
-            message.reply(
-                "Successfully created and uploaded snapshot to Cloud Storage."
+
+            await message.reply(
+                `Cron schedule successfully updated to: ${newSchedule}`
+            );
+        } catch (error) {
+            await message.reply(
+                "Invalid cron schedule format.\nExample: !snap 59 23 * * *"
             );
         }
-    );
-
-    if (args.length !== 1) {
+    } else {
         await message.reply(
-            "Usage: !snap <cron_schedule>\nExample: !snap '59 23 * * *'"
+            "Usage: !snap <cron_schedule>\nExample: !snap 59 23 * * *"
         );
         return;
-    }
-
-    const newSchedule = args[0];
-
-    try {
-        // Validate the new cron schedule
-        cron.validate(newSchedule);
-
-        // Stop the existing cron job
-        cronJob.stop();
-
-        // Start a new cron job with the new schedule
-        cronJob = startCronJob(newSchedule, client, groups);
-
-        // Parse the cron schedule
-        const [minute, hour, dayOfMonth, month, dayOfWeek] =
-            newSchedule.split(" ");
-
-        // Store the new cron schedule in the database
-        await prisma.cronJobsSchedule.update({
-            where: { id: 1 },
-            data: { 
-                hour: `${hour}:${minute}`,
-                dayOfMonth,
-                month,
-                dayOfWeek,
-             },
-        });
-
-        logger.info(`Cron schedule successfully updated to: ${newSchedule}`);
-
-        await message.reply(`Cron schedule successfully updated to: ${newSchedule}`);
-    } catch (error) {
-        await message.reply(
-            "Invalid cron schedule format.\nExample: !setCron '59 23 * * *'"
-        );
     }
 }
 

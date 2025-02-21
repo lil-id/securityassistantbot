@@ -110,7 +110,7 @@ model Feedbacks {
 
 model CronJobsSchedule {
   id         Int     @id @default(autoincrement())
-  hour       String?
+  hourMinute String?
   dayOfMonth String?
   dayOfWeek  String?
   month      String?

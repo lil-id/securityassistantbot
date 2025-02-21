@@ -75,9 +75,6 @@ const groups = {
     member: "",
 };
 
-// Variable to store the cron schedule
-let cronSchedule = "59 23 * * *";
-
 // Check if client is ready
 client.on("ready", async () => {
     logger.info("Client is ready!");
@@ -125,47 +122,49 @@ client.on("ready", async () => {
     }
 
     // Start the initial cron job
-    startCronJob(cronSchedule, client, groups);
+    let cronJob = startCronJob(cronSchedule, client, groups);
     logger.info("Initial cron job started.");
 
     // Start the Express server after the WhatsApp client is ready
     server.listen(PORT, () => {
         logger.info(`Wazuh webhook receiver listening on port ${PORT}`);
     });
-});
 
-// Message handler
-client.on("message_create", async (message) => {
-    const content =
-        typeof message.body === "string" ? message.body.replace(/\*/g, "") : "";
+    // Message handler
+    client.on("message_create", async (message) => {
+        const content =
+            typeof message.body === "string"
+                ? message.body.replace(/\*/g, "")
+                : "";
 
-    // Check if it's a command (starts with !)
-    if (!content.startsWith("!")) return;
+        // Check if it's a command (starts with !)
+        if (!content.startsWith("!")) return;
 
-    // Split command and arguments
-    const [command, ...args] = content.split(" ");
-    const getRole = await checkRoles(message.author);
+        // Split command and arguments
+        const [command, ...args] = content.split(" ");
+        const getRole = await checkRoles(message.author);
 
-    // Handle based on role
-    if (getRole && getRole.role === "admin") {
-        const adminHandler = adminCommands[command];
-        await prisma.adminActicitylogs.create({
-            data: {
-                idAdmin: getRole.id,
-                name: getRole.name,
-                activity: content,
-            },
-        });
+        // Handle based on role
+        if (getRole && getRole.role === "admin") {
+            const adminHandler = adminCommands[command];
+            await prisma.adminActicitylogs.create({
+                data: {
+                    idAdmin: getRole.id,
+                    name: getRole.name,
+                    activity: content,
+                },
+            });
 
-        if (adminHandler) {
-            await adminHandler(client, message, args);
+            if (adminHandler) {
+                await adminHandler(client, message, args, groups, cronJob, cronJobSchedule);
+            }
+        } else {
+            const userHandler = userCommands[command];
+            if (userHandler) {
+                await userHandler(message, args, groups, cronJob, cronJobSchedule);
+            }
         }
-    } else {
-        const userHandler = userCommands[command];
-        if (userHandler) {
-            await userHandler(message, args);
-        }
-    }
+    });
 });
 
 // Schedule snapshot to run every day at 00:00 AM
