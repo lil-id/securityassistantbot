@@ -11,6 +11,7 @@ async function handleFeedback(client, message, args) {
         .map((contact) => contact.name || "Unknown")
         .join(", ");
 
+    // TODO: Feedback handling for users general not admin
     if (getRole && getRole.role === "admin") {
         // Get all feedbacks
         if (feedBackMessage.toLowerCase() === "all") {

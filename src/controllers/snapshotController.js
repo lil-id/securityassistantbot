@@ -39,6 +39,10 @@ function startCronJob(schedule, client, groups) {
 
 async function handleSnapshot(client, message, args, groups, cronJob) {
     if (args.length === 0) {
+        const chat = await client.getChatById(message.from);
+        await chat.sendSeen();
+        await chat.sendStateTyping();
+        
         logger.info("Creating system snapshot...");
         await message.reply("Creating system snapshot...");
         exec(

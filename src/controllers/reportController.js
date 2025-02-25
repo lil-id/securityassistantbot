@@ -2,6 +2,11 @@ const { reportBot } = require('../models/reportModel');
 const { checkRoles } = require('../helpers/rolesChecker');
 
 async function handleReport(client, message, args) {
+
+    const chat = await client.getChatById(message.from);
+    await chat.sendSeen();
+    await chat.sendStateTyping();
+
     const reportMessage = args.join(" ");
     const phoneNumber = message.mentionedIds;
 

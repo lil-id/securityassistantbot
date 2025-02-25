@@ -3,6 +3,10 @@ const { getSystemStats, startMonitoring, stopMonitoring, THRESHOLDS } = require(
 // Example usage with the WhatsApp bot
 async function handleServerStatus(client, message, args) {
     try {
+        const chat = await client.getChatById(message.from);
+        await chat.sendSeen();
+        await chat.sendStateTyping();
+        
         const result = await getSystemStats();
         const response = `System Statistics\n\n` +
                         `${result.stats.cpu}\n` +

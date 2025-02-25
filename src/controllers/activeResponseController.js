@@ -155,38 +155,47 @@ wazuhRouter.get("/alerts/summary", adminSession || userSession, async (req, res)
 });
 
 async function handleActiveResponse(client, message, args) {
-    logger.info('Summary of alerts...');
-    const keys = await redisClient.keys("alerts:*");
-    if (keys.length > 0) {
-        const alerts = [];
-        for (const key of keys) {
-            const alertList = await redisClient.lrange(key, 0, -1);
-            alerts.push(...alertList.map(JSON.parse));
-        }
+    try {
+        const chat = await client.getChatById(message.from);
+        await chat.sendSeen();
+        await chat.sendStateTyping();
 
-        const ipCounts = alerts.reduce((acc, alert) => {
-            if (!acc[alert.src_ip]) {
-                acc[alert.src_ip] = { count: 0, agent: alert.agent, level: alert.level };
+        logger.info('Summary of alerts...');
+        const keys = await redisClient.keys("alerts:*");
+        if (keys.length > 0) {
+            const alerts = [];
+            for (const key of keys) {
+                const alertList = await redisClient.lrange(key, 0, -1);
+                alerts.push(...alertList.map(JSON.parse));
             }
-            acc[alert.src_ip].count += 1;
-            acc[alert.src_ip].level = Math.max(acc[alert.src_ip].level, alert.level); // Keep the highest level
-            return acc;
-        }, {});
-
-        const sortedEntries = Object.entries(ipCounts).sort((a, b) => b[1].count - a[1].count || b[1].level - a[1].level);
-
-        let summaryMessage = 'Summary of alerts\n\n';
-        for (const [ip, data] of sortedEntries) {
-            summaryMessage += `🖥️ *Agent*: ${data.agent}\n`;
-            summaryMessage += `🔔 *Rule Level*: ${data.level}\n`;
-            summaryMessage += `🔄 *Triggered*: ${data.count} times\n`;
-            summaryMessage += `🌐 *IP Address*: ${ip}\n`;
-            summaryMessage += `🔗 *Link Detail*: ${process.env.LOG_URL}/summary\n\n`
+    
+            const ipCounts = alerts.reduce((acc, alert) => {
+                if (!acc[alert.src_ip]) {
+                    acc[alert.src_ip] = { count: 0, agent: alert.agent, level: alert.level };
+                }
+                acc[alert.src_ip].count += 1;
+                acc[alert.src_ip].level = Math.max(acc[alert.src_ip].level, alert.level); // Keep the highest level
+                return acc;
+            }, {});
+    
+            const sortedEntries = Object.entries(ipCounts).sort((a, b) => b[1].count - a[1].count || b[1].level - a[1].level);
+    
+            let summaryMessage = 'Summary of alerts\n\n';
+            for (const [ip, data] of sortedEntries) {
+                summaryMessage += `🖥️ *Agent*: ${data.agent}\n`;
+                summaryMessage += `🔔 *Rule Level*: ${data.level}\n`;
+                summaryMessage += `🔄 *Triggered*: ${data.count} times\n`;
+                summaryMessage += `🌐 *IP Address*: ${ip}\n`;
+                summaryMessage += `🔗 *Link Detail*: ${process.env.LOG_URL}/summary\n\n`
+            }
+    
+            await message.reply(summaryMessage);
+        } else {
+            await message.reply("No alerts available");
         }
-
-        await message.reply(summaryMessage);
-    } else {
-        await message.reply("No alerts available");
+    } catch (error) {
+        logger.error("Error getting active response:", error);
+        message.reply(`Error: ${error.message}`);
     }
 }
 

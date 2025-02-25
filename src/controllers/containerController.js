@@ -4,6 +4,10 @@ const { dockerMonitor } = require("../models/containerMonitor");
 async function handleContainerStatus(client, message, args) {
     const commandOption = args.join(" ");
     try {
+        const chat = await client.getChatById(message.from);
+        await chat.sendSeen();
+        await chat.sendStateTyping();
+        
         if (commandOption.toLowerCase() === "active") {
             const containerRunningStatus =
                 await dockerMonitor.getRunningDockerContainers();
