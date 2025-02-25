@@ -21,16 +21,16 @@ async function handleAddAICommand(client, message, args) {
 }
 
 async function handleSecurityRecommendation(req, res) {
-    const { fullLogs } = req.body;
+    const { body } = req.body;
     const isRunning = await ollamaModel.isServerRunning();
 
     if (!isRunning) {
         logger.info("AI server is not running.");
-        return res.status(503).send("AI server is not running.");
+        return res.status(503).send({code: 503, message: "AI server is not running."});
     }
 
     logger.info("Asking AI for security recommendation...");
-    const response = await ollamaModel.sendPrompt(`Provide security recommendations based on the following logs:\n${fullLogs}`);
+    const response = await ollamaModel.sendPrompt(`Provide security recommendations based on the following logs:\n${body}`);
     console.log(response);
     res.send(response);
 }

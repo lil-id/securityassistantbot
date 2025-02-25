@@ -35,12 +35,12 @@ async function trackAlert(ip) {
     let count = await redisClient.get(key);
 
     if (!count) {
-        await redisClient.setex(key, 300, 1); // Set TTL of 5 minutes
+        await redisClient.setex(key, 600, 1); // Set TTL of 5 minutes
         return 1; // First occurrence
     }
 
     count = parseInt(count) + 1;
-    await redisClient.setex(key, 300, count); // Reset TTL on update
+    await redisClient.setex(key, 600, count); // Reset TTL on update
     return count;
 }
 
@@ -99,7 +99,7 @@ async function processAlert(alert, client, groups) {
 // Webhook endpoint
 // TODO - Implement the webhook endpoint with secret key
 function setupActiveResponseRoutes(client, groups, io) {
-    wazuhRouter.post('/alerts', adminSession || userSession, async (req, res) => {
+    wazuhRouter.post('/alerts', async (req, res) => {
         try {
             const alert = req.body;
             let reformatAlert = {

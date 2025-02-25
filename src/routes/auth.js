@@ -1,9 +1,7 @@
-const { authUserRouter } = require('../controllers/users/auth/authUserController');
-const { authAdminRouter } = require('../controllers/admins/auth/authAdminController');
+const { authRouter } = require('../controllers/auth/authController');
 
 const setAuthRoutes = (router) => {
-    router.use('/user', authUserRouter);
-    router.use('/admin', authAdminRouter)
+    router.use('/auth', authRouter)
 };
 
 module.exports = { setAuthRoutes };
