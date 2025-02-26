@@ -1,4 +1,5 @@
 const { botAdmins } = require("../../models/admins/adminModel");
+const { adminHelpMessage } = require("../../views/responseMessage");
 
 async function handleAddAdminCommand(client, message, args) {
     const chat = await client.getChatById(message.from);
@@ -33,6 +34,7 @@ async function handleAddAdminCommand(client, message, args) {
             `Admins have been added successfully:\n\n${addedAdminsNames}`
         );
         await message.reply("Welcome to the team chief! 🎉");
+        await message.reply(adminHelpMessage);
     }
 }
 
