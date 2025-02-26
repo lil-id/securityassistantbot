@@ -53,7 +53,6 @@ app.use(
 );
 app.use(bodyParser.json());
 app.set("trust proxy", true);
-app.use(express.static(path.join(__dirname, "src/public")));
 
 // Initialize WhatsApp client
 const client = new Client({
@@ -136,7 +135,6 @@ client.on("ready", async () => {
             typeof message.body === "string"
                 ? message.body.replace(/\*/g, "")
                 : "";
-
         // Check if it's a command (starts with !)
         if (!content.startsWith("!")) return;
 
@@ -207,20 +205,6 @@ io.on("connection", (socket) => {
     socket.on("disconnect", () => {
         logger.info("user disconnected");
     });
-});
-
-// Serve index.html
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "src/public/html/index.html"));
-});
-
-app.get("/dashboard", (req, res) => {
-    res.sendFile(path.join(__dirname, "src/public/html/home.html"));
-});
-
-// Serve summary.html
-app.get("/summary", (req, res) => {
-    res.sendFile(path.join(__dirname, "src/public/html/summary.html"));
 });
 
 // Error handling
