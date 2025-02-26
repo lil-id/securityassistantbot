@@ -1,4 +1,5 @@
 const { botUsers } = require("../../models/users/userModel");
+const { userHelpMessage } = require("../../views/responseMessage");
 
 async function handleAddUserCommand(client, message, args) {
     const chat = await client.getChatById(message.from);
@@ -30,6 +31,7 @@ async function handleAddUserCommand(client, message, args) {
             `Users have been added successfully:\n\n${addedUsersNames}`
         );
         await message.reply("Welcome to the team chief! 🎉");
+        await message.reply(userHelpMessage);
     }
 }
 

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { prisma } = require('../helpers/databaseConnection');
+const logger = require('../helpers/logger');
 require('dotenv').config();
 
 const usersSession = async (req, res, next) => {
@@ -22,30 +23,16 @@ const usersSession = async (req, res, next) => {
           id: users.idUser,
         };
         return next();
-      } 
-      return res.status(401).send({
-        status: false,
-        message: 'failed',
-        error: 'Not Authorize',
-      });
-      
+      }
+
+      throw new Error('Not Authorized');
     } catch (error) {
-      console.log('Users middleware helpers error: ', error);
-      return res.status(401).send({
-        status: false,
-        message: 'failed',
-        error: 'JWT Token Expired',
-      });
+      logger.info('Users middleware helpers error: ', error);
+      return next();
     }
   }
 
-  if (!token) {
-    return res.status(401).send({
-      status: false,
-      message: 'failed',
-      error: 'Not Authorize, No Token',
-    });
-  }
+  return next();
 };
 
 module.exports = usersSession;

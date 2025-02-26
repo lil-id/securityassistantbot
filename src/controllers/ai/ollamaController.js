@@ -1,8 +1,5 @@
 const { ollamaModel } = require("../../models/ai/ollamaModel");
-const { Router } = require('express');
 const logger = require("../../helpers/logger");
-
-const ollamaRouter = Router();
 
 async function handleAddAICommand(client, message, args) {
     const content = args.join(" ");
@@ -15,7 +12,9 @@ async function handleAddAICommand(client, message, args) {
     }
 
     logger.info("Asking AI...");
+    logger.info("This may take 2-3 minutes...");
     await message.reply("Asking AI...");
+    await message.reply("This may take 2-3 minutes...");
     const response = await ollamaModel.sendPrompt(content);
     await message.reply(response);
 }
