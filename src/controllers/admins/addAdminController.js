@@ -1,6 +1,10 @@
 const { botAdmins } = require("../../models/admins/adminModel");
 
 async function handleAddAdminCommand(client, message, args) {
+    const chat = await client.getChatById(message.from);
+    await chat.sendSeen();
+    await chat.sendStateTyping();
+
     const getMentionsNames = await message.getMentions();
     const existingAdmins = await botAdmins.checkExistingAdmins(
         getMentionsNames

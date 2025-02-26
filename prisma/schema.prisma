@@ -21,6 +21,8 @@ model Admins {
   createdAt            DateTime              @default(now())
   AdminActicitylogs    AdminActicitylogs[]
   JWTAccessTokenAdmins JWTAccessTokenAdmins?
+  ReportAdmins         ReportAdmins[]
+  FeedbackAdmins       FeedbackAdmins[]
 
   @@map("admins")
 }
@@ -54,8 +56,8 @@ model Users {
   name                String?
   numberPhone         String               @unique
   createdAt           DateTime             @default(now())
-  Feedbacks           Feedbacks[]
-  Reports             Reports[]
+  FeedbackUsers       FeedbackUsers[]
+  ReportUsers         ReportUsers[]
   UserActicitylogs    UserActicitylogs[]
   JWTAccessTokenUsers JWTAccessTokenUsers?
 
@@ -85,7 +87,7 @@ model JWTAccessTokenUsers {
   @@map("jwtaccesstokenusers")
 }
 
-model Reports {
+model ReportUsers {
   id        Int      @id @default(autoincrement())
   user      Users?   @relation(fields: [idUser], references: [id], onDelete: SetNull)
   idUser    Int?
@@ -94,10 +96,22 @@ model Reports {
   report    String?
   createdAt DateTime @default(now())
 
-  @@map("reports")
+  @@map("reportusers")
 }
 
-model Feedbacks {
+model ReportAdmins {
+  id        Int      @id @default(autoincrement())
+  admin     Admins?  @relation(fields: [idAdmin], references: [id], onDelete: SetNull)
+  idAdmin   Int?
+  name      String?
+  evidence  String?
+  report    String?
+  createdAt DateTime @default(now())
+
+  @@map("reportadmins")
+}
+
+model FeedbackUsers {
   id        Int      @id @default(autoincrement())
   user      Users?   @relation(fields: [idUser], references: [id], onDelete: SetNull)
   idUser    Int?
@@ -105,7 +119,18 @@ model Feedbacks {
   feedback  String?
   createdAt DateTime @default(now())
 
-  @@map("feedbacks")
+  @@map("feedbackusers")
+}
+
+model FeedbackAdmins {
+  id        Int      @id @default(autoincrement())
+  admin     Admins?  @relation(fields: [idAdmin], references: [id], onDelete: SetNull)
+  idAdmin   Int?
+  name      String?
+  feedback  String?
+  createdAt DateTime @default(now())
+
+  @@map("feedbackadmins")
 }
 
 model CronJobsSchedule {

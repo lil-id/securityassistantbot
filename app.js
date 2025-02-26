@@ -161,7 +161,7 @@ client.on("ready", async () => {
         } else {
             const userHandler = userCommands[command];
             if (userHandler) {
-                await userHandler(message, args, groups, cronJob, cronJobSchedule);
+                await userHandler(client, message, args, groups, cronJob, cronJobSchedule);
             }
         }
     });
