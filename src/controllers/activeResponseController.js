@@ -4,6 +4,7 @@ const axios = require("axios");
 const logger = require("../helpers/logger");
 const userSession = require("../middleware/usersMiddleware");
 const adminSession = require("../middleware/adminsMiddleware");
+const { apiKeyMiddleware } = require("../middleware/wazuhMiddleware");
 require("dotenv").config();
 
 const wazuhRouter = Router();
@@ -103,7 +104,7 @@ async function processAlert(alert, client, groups) {
             `🔄 Alert from ${alert.src_ip} triggered ${count} times. Notifying...`
         );
         await client.sendMessage(
-            groups.member,
+            groups.alertTrigger,
             `🔄 Alert from *${alert.src_ip}* triggered ${count} times.`
         );
     } else {
@@ -126,10 +127,8 @@ const allowEitherSession = (req, res, next) => {
     });
 }
 
-// Webhook endpoint
-// TODO - Implement the webhook endpoint with secret key
 function setupActiveResponseRoutes(client, groups, io) {
-    wazuhRouter.post("/alerts", async (req, res) => {
+    wazuhRouter.post("/alerts", apiKeyMiddleware, async (req, res) => {
         try {
             const alert = req.body;
             let reformatAlert = {

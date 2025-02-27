@@ -72,6 +72,7 @@ client.on("qr", (qr) => {
 const groups = {
     announcement: "",
     member: "",
+    alertTrigger: "",
 };
 
 // Check if client is ready
@@ -85,6 +86,8 @@ client.on("ready", async () => {
                 groups.announcement = chat.id._serialized;
             } else if (chat.name.toLowerCase() === "security member") {
                 groups.member = chat.id._serialized;
+            } else if (chat.name.toLowerCase() === "alert trigger") {
+                groups.alertTrigger = chat.id._serialized;
             }
         });
     }
@@ -163,35 +166,6 @@ client.on("ready", async () => {
             }
         }
     });
-});
-
-// Schedule snapshot to run every day at 00:00 AM
-cron.schedule("59 23 * * *", () => {
-    logger.info("Running scheduled system snapshot...");
-    client.sendMessage(groups.member, "Running scheduled system snapshot...");
-    exec(
-        "bash src/scripts/systemSnapshot.sh",
-        { maxBuffer: 1024 * 1024 * 10 },
-        (error, stdout, stderr) => {
-            if (error) {
-                logger.error(`Error creating snapshot: ${error.message}`);
-                return;
-            }
-            logger.info(`Snapshot stdout: ${stdout}`);
-            logger.error(`Snapshot stderr: ${stderr}`);
-            logger.info(
-                "Successfully created and uploaded snapshot to Cloud Storage."
-            );
-            client.sendMessage(
-                groups.member,
-                "Successfully created and uploaded snapshot to Cloud Storage."
-            );
-            client.sendMessage(
-                groups.member,
-                "Scheduled system snapshot completed."
-            );
-        }
-    );
 });
 
 // Initialize the client
