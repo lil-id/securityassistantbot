@@ -5,9 +5,8 @@ const responseMessages = {
     noPermission: 'You do not have permission to terminate the bot.'
 };
 
-let adminHelpMessage = "Available commands.\n\n";
-adminHelpMessage += "*Admin Commands*:\n";
-adminHelpMessage += "!ask - Ask question to AI\n";
+let adminHelpMessage = "*Admin commands*:\n\n";
+adminHelpMessage += "!ask - Get security recommendation or ask AI\n";
 adminHelpMessage += "!admin - Added new admin\n";
 adminHelpMessage += "!user - Added new member\n";
 adminHelpMessage += "!server - Check server status\n";
@@ -16,6 +15,7 @@ adminHelpMessage += "!server - Check server status\n";
 adminHelpMessage += "!account - Check server accounts\n";
 adminHelpMessage += "!container - Check container status\n";
 adminHelpMessage += "!snap - Create snapshot\n";
+adminHelpMessage += "!botnet - Check malicious IPs botnet\n";
 adminHelpMessage += "!response - View active response summary\n";
 adminHelpMessage += "!feedback - View all feedback\n";
 adminHelpMessage += "!report - View all issues\n";
@@ -23,12 +23,13 @@ adminHelpMessage += "!help - Show this help message\n";
 adminHelpMessage += "!info - Get bot information\n";
 adminHelpMessage += "!stop - Terminate bot\n";
 
-let userHelpMessage = "Available commands.\n\n";
-userHelpMessage += "*User Commands*:\n";
+let userHelpMessage = "*User commands*:\n\n";
+userHelpMessage += "!ask - Get security recommendation or ask AI\n";
 userHelpMessage += "!server - Check server status\n";
 userHelpMessage += "!account - Check server accounts\n";
 userHelpMessage += "!container - Check container status\n";
 userHelpMessage += "!snap - Create snapshot\n";
+userHelpMessage += "!botnet - Check malicious IPs botnet\n";
 userHelpMessage += "!response - View active response summary\n";
 userHelpMessage += "!feedback - Create feedback\n";
 userHelpMessage += "!report - Report issues\n";

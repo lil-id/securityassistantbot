@@ -1,5 +1,6 @@
 const { Router } = require("express");
 const redis = require("ioredis");
+const https = require("https");
 const axios = require("axios");
 const logger = require("../helpers/logger");
 const userSession = require("../middleware/usersMiddleware");
@@ -60,15 +61,85 @@ async function storeAlert(alert) {
 
 // Determine if an alert is interesting
 async function isInteresting(alert) {
-    // Always check if the source IP is malicious
-    const isMalicious = await checkThreatIntel(alert.src_ip);
+    if (alert.level >= 5) {
+        // Always check if the source IP is malicious
+        const isMalicious = await checkThreatIntel(alert.src_ip);
+        
+        // Check alert severity
+        if (isMalicious) return true; // Critical alerts are always interesting
 
-    // Check alert severity
-    if (isMalicious && alert.level >= 5) return true; // Critical alerts are always interesting
+        return (
+            alert.groups.includes("authentication_failed") &&
+            alert.groups.includes("invalid_login")
+        );
+    }
+}
 
-    return (
-        alert.groups.includes("authentication_failed") &&
-        alert.groups.includes("invalid_login")
+// Send alert message to WhatsApp group
+async function sendAlertMessage(client, groups, alert) {
+    await client.sendMessage(
+        groups.announcement,
+        `🪪 *ID*: ${alert.id}\n` +
+        `🖥️ *Agent*: ${alert.agent}\n` +
+        `📝 *Description*: ${alert.description}\n` +
+        `🔔 *Rule Level*: ${alert.level}\n` +
+        `🕒 *Timestamp*: ${alert.timestamp}\n` +
+        `🌐 *Src IP*: ${alert.src_ip}\n` +
+        `🏷️ *Groups*: ${alert.groups}\n` +
+        `📋 *Full Log*: ${alert.full_log}\n` +
+        `🔗 *Link Detail*: ${process.env.LOG_URL}\n`
+    );
+}
+
+// Handle alert escalation
+async function handleAlertEscalation(client, groups, alert) {
+    if (await isInteresting(alert)) {
+        logger.info("🚨 Interesting alert detected! Escalating...");
+        await sendAlertMessage(client, groups, alert);
+    } else {
+        logger.info("⚠️ False positive detected. Ignoring...");
+    }
+}
+
+// Handle alert notification
+async function triggerActiveReponseNotification(client, groups, alert, count) {
+    if (alert.id !== "000" && alert.rule !== "2904") {
+        logger.info(
+            `🔄 Alert from ${alert.src_ip} triggered ${count} times. Notifying...`
+        );
+        await client.sendMessage(
+            groups.alertTrigger,
+            `🔄 Alert from *${alert.src_ip}* triggered ${count} times.`
+        );
+
+        const isTrigger = await triggerActiveReponse(alert.id, alert.src_ip);
+        
+        if (isTrigger) {
+            logger.info(
+                `🔥 Active response triggered for ${alert.src_ip}.`
+            );
+            await client.sendMessage(
+                groups.alertTrigger,
+                `🤖 Automatically block for *${alert.src_ip}*`
+            );
+        }
+    } else {
+        logger.warn("Invalid alert ID. Skipping active response...");
+    }
+}
+
+// Process rule 5402 alert with level 3 = This for monitoring commands run as root
+async function processRule5402Alert(client, groups, alert) {
+    logger.info("Processing rule 5402 alert with level 3...");
+    await client.sendMessage(
+        groups.member,
+        `🪪 *ID*: ${alert.id}\n` +
+        `🖥️ *Agent*: ${alert.agent}\n` +
+        `🔔 *Rule Level*: ${alert.level}\n` +
+        `👤 *Account*: ${alert.account}\n` +
+        `📝 *Description*: ${alert.description}\n` +
+        `🏷️ *Groups*: ${alert.groups}\n` +
+        `📋 *Full Log*: ${alert.full_log}\n`
     );
 }
 
@@ -81,37 +152,18 @@ async function processAlert(alert, client, groups) {
             ? "🔍 New alert detected!"
             : "🔍 Alert already detected. Incrementing count..."
     );
-    if (count === 1) {
-        if (await isInteresting(alert)) {
-            logger.info("🚨 Interesting alert detected! Escalating...");
-            // Send message to WhatsApp group
-            await client.sendMessage(
-                groups.announcement,
-                `🖥️ *Agent*: ${alert.agent}\n` +
-                    `📝 *Description*: ${alert.description}\n` +
-                    `🔔 *Rule Level*: ${alert.level}\n` +
-                    `🕒 *Timestamp*: ${alert.timestamp}\n` +
-                    `🌐 *Src IP*: ${alert.src_ip}\n` +
-                    `🏷️ *Groups*: ${alert.groups}\n` +
-                    `📋 *Full Log*: ${alert.full_log}\n` +
-                    `🔗 *Link Detail*: ${process.env.LOG_URL}`
-            );
-        } else {
-            logger.info("⚠️ False positive detected. Ignoring...");
-        }
-    } else if (count % 5 === 0) {
-        logger.info(
-            `🔄 Alert from ${alert.src_ip} triggered ${count} times. Notifying...`
-        );
-        await client.sendMessage(
-            groups.alertTrigger,
-            `🔄 Alert from *${alert.src_ip}* triggered ${count} times.`
-        );
+    if (alert.rule === "5402" && alert.level === 3) {
+        await processRule5402Alert(client, groups, alert);
+    } else if (count === 1 && alert.level >= 5) {
+        await handleAlertEscalation(client, groups, alert);
+    } else if (count % 5 === 0 && alert.level >= 5) {
+        await triggerActiveReponseNotification(client, groups, alert, count);
     } else {
         logger.info(`🔄 Alert from ${alert.src_ip} triggered ${count} times.`);
     }
 }
 
+// Middleware to allow either user or admin session
 const allowEitherSession = (req, res, next) => {
     adminSession(req, res, (err) => {
         logger.info("Checking admin session...");
@@ -125,18 +177,24 @@ const allowEitherSession = (req, res, next) => {
             return res.status(401).json({ error: "Unauthorized access" });
         });
     });
-}
+};
 
+// Wazuh webhook receiver
 function setupActiveResponseRoutes(client, groups, io) {
     wazuhRouter.post("/alerts", apiKeyMiddleware, async (req, res) => {
         try {
             const alert = req.body;
             let reformatAlert = {
+                id: alert.agent.id,
                 agent: alert.agent.name,
+                rule: alert.rule.id,
+                account: alert.data && alert.data.dstuser ? alert.data.dstuser : "",
                 description: alert.rule.description,
                 level: alert.rule.level,
                 timestamp: alert.timestamp,
-                src_ip: alert.data.srcip ? alert.data.srcip : "None",
+                src_ip: alert.data && alert.data.srcip
+                    ? alert.data.srcip
+                    : alert.rule.description,
                 groups: alert.rule.groups,
                 full_log: alert.full_log,
             };
@@ -144,7 +202,7 @@ function setupActiveResponseRoutes(client, groups, io) {
             // Emit alert to WebSocket clients
             io.emit("alert", alert);
 
-            if (alert.length !== 0) {
+            if ((alert.rule.id === "5402" || alert.rule.level >= 5) && !alert.rule.id.startsWith("2350")) {
                 processAlert(reformatAlert, client, groups);
                 res.status(200).json({ status: "Alert received successfully" });
             } else {
@@ -157,16 +215,12 @@ function setupActiveResponseRoutes(client, groups, io) {
         }
     });
 
-    wazuhRouter.get(
-        "/alerts/:ip",
-        allowEitherSession,
-        async (req, res) => {
-            logger.info(`Getting alerts for IP: ${req.params.ip}`);
-            const key = `alerts:${req.params.ip}`;
-            const alerts = await redisClient.lrange(key, 0, -1);
-            res.json(alerts.map(JSON.parse));
-        }
-    );
+    wazuhRouter.get("/alerts/:ip", allowEitherSession, async (req, res) => {
+        logger.info(`Getting alerts for IP: ${req.params.ip}`);
+        const key = `alerts:${req.params.ip}`;
+        const alerts = await redisClient.lrange(key, 0, -1);
+        res.json(alerts.map(JSON.parse));
+    });
 
     // Root endpoint for testing
     wazuhRouter.get("/", (req, res) => {
@@ -176,6 +230,7 @@ function setupActiveResponseRoutes(client, groups, io) {
     return wazuhRouter;
 }
 
+// Get summary of active response alerts via Web
 wazuhRouter.get("/alerts/summary", allowEitherSession, async (req, res) => {
     try {
         logger.info("Fetching all alerts...");
@@ -198,7 +253,8 @@ wazuhRouter.get("/alerts/summary", allowEitherSession, async (req, res) => {
     }
 });
 
-async function handleActiveResponse(client, message, args) {
+// Get summary of active response alerts via WhatsApp
+async function handleActiveResponseSummary(client, message, args) {
     try {
         const chat = await client.getChatById(message.from);
         await chat.sendSeen();
@@ -251,4 +307,61 @@ async function handleActiveResponse(client, message, args) {
     }
 }
 
-module.exports = { handleActiveResponse, setupActiveResponseRoutes };
+// Login to Wazuh API to get JWT token
+async function loginToWazuh() {
+    try {
+        const response = await axios.post(
+            `${process.env.WAZUH_API_URL}/security/user/authenticate`,
+            {},
+            {
+                headers: {
+                    "Authorization": "Basic " + Buffer.from(`${process.env.WAZUH_API_USER}:${process.env.WAZUH_API_PASS}`).toString("base64"),
+                    "Content-Type": "application/json"
+                },
+                httpsAgent: new https.Agent({
+                    rejectUnauthorized: false // Ignore self-signed SSL issues
+                })
+            }
+        );
+
+        return response.data.data.token;
+    } catch (error) {
+        logger.error("Error getting JWT token:", error.response?.data || error.message);
+        return null;
+    }
+};
+
+// Trigger active response to block IP
+async function triggerActiveReponse(idAgent, ipAddress) {
+    try {
+        logger.info("Triggering active response...");
+
+        const jwtToken = await loginToWazuh();
+        const response = await axios.put(
+            `${process.env.WAZUH_API_URL}/active-response?agents_list=${idAgent}&pretty=true`,
+            {
+                "command": "!firewalld-drop",
+                "arguments": [`${ipAddress}`],
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${jwtToken}`,
+                },
+                httpsAgent: new https.Agent({
+                    rejectUnauthorized: false, // Accept self-signed certificates
+                }),
+            }
+        );
+
+        if (response.data.data.total_failed_items === 0) {
+            return true;
+        }
+
+        return false;
+    } catch (error) {
+        logger.error("Error triggering active response:", error);
+
+    }
+}
+
+module.exports = { handleActiveResponseSummary, triggerActiveReponse, setupActiveResponseRoutes };

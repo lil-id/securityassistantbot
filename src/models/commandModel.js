@@ -7,10 +7,11 @@ const { handleAddAICommand } = require('../controllers/ai/ollamaController');
 const { handleBotTermination } = require('../controllers/handleBotTermination');
 const { handleContainerStatus } = require('../controllers/containerController');
 const { handleAddUserCommand } = require('../controllers/users/addUserController');
-const { handleActiveResponse } = require('../controllers/activeResponseController');
+const { handleActiveResponseSummary } = require('../controllers/activeResponseController');
 const { handleAddAdminCommand } = require('../controllers/admins/addAdminController');
 const { handleAccountCheck, handleAccountMonitorCommand } = require('../controllers/accountMonitorController');
 const { handleServerStatus, handleMonitorCommand, handleThresholdCommand } = require('../controllers/systemMonitorController');
+const { handleBotnetCheck } = require('../controllers/handleBotnetCheck');
 
 const adminCommands = {
     "!admin": handleAddAdminCommand,
@@ -23,7 +24,8 @@ const adminCommands = {
     // "!accmon": handleAccountMonitorCommand,
     "!container": handleContainerStatus,
     "!snap": handleSnapshot,
-    "!response": handleActiveResponse,
+    "!botnet": handleBotnetCheck,
+    "!response": handleActiveResponseSummary,
     "!feedback": handleFeedback,
     "!report": handleReport,
     "!help": handleHelp,
@@ -32,11 +34,13 @@ const adminCommands = {
 };
 
 const userCommands = {
+    "!ask": handleAddAICommand,
     "!server": handleServerStatus,
     "!account": handleAccountCheck,
     "!container": handleContainerStatus,
     "!snap": handleSnapshot,
-    "!response": handleActiveResponse,
+    "!botnet": handleBotnetCheck,
+    "!response": handleActiveResponseSummary,
     "!feedback": handleFeedback,
     "!report": handleReport,
     "!help": handleHelp,
