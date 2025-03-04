@@ -9,28 +9,32 @@ async function handleAddAICommand(client, message, args) {
     await chat.sendStateTyping();
 
     if (!isRunning) {
-        logger.info("AI server is not running.");
-        await message.reply("AI server is not running.");
-        return res.status(503).send("AI server is not running.");
+        try {
+            logger.info("AI server is not running.");
+            await message.reply("AI server is not running.");
+            return res.status(503).send("AI server is not running.");
+        } catch (error) {
+            logger.error("Error in handleAddAICommand:", error);
+            await message.reply("Error in handleAddAICommand");
+        }
     }
 
-    if (message.body === "!ask" || content.length === 0) {
-        await message.reply(
-            "Please *select security alert* to get security recommendation and type \n!ask"
-        );
-        await message.reply(
-            "or provide argument text for custom question.\n\nExample: \n\n*!ask why sky is blue?*"
-        );
-        return;
-    }
+    // if (content.length === 0) {
+    //     await message.reply(
+    //         "Please *select security alert* to get security recommendation and type \n!ask"
+    //     );
+    //     await message.reply(
+    //         "or provide argument text for custom question.\n\nExample: \n\n*!ask why sky is blue?*"
+    //     );
+    //     return;
+    // }
 
     let prompt =
         "Act as a senior SOC analyst. Given the following security alert from Wazuh, analyze the potential threat, determine its severity, and recommend remediation steps. Provide your reasoning based on best SOC practices.\n\n";
 
     logger.info("Asking AI...");
     logger.info("This may take 3-5 minutes...");
-    await message.reply("Asking AI...");
-    await message.reply("This may take 3-5 minutes...");
+    await message.reply("Asking AI...\n\nThis may take 3-5 minutes...");
 
     if (args.length === 0) {
         const quotedMsg = await message._data.quotedMsg.body;

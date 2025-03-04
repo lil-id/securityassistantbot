@@ -13,10 +13,13 @@ async function handleHelp(client, message, args) {
     
         if (getRole && getRole.role === "admin") {
             await message.reply(adminHelpMessage);
+            await message.getChat();
+            await chat.pin();
             return;
-        }
-    
+        }    
         await message.reply(userHelpMessage);
+        await message.getChat();
+        await getChat.pin();
         return;
     } catch (error) {
         logger.error("Error in handleHelp:", error);

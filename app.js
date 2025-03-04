@@ -138,11 +138,20 @@ client.on("ready", async () => {
             typeof message.body === "string"
                 ? message.body.replace(/\*/g, "")
                 : "";
-        // Check if it's a command (starts with !)
-        if (!content.startsWith("!")) return;
+        // Split the message by new lines
+        const lines = content.split("\n").map(line => line.trim()).filter(line => line);
 
-        // Split command and arguments
-        const [command, ...args] = content.split(" ");
+        // Check if there's at least one line and it starts with "!"
+        if (lines.length === 0 || !lines[0].startsWith("!")) return;
+
+        // Extract command and arguments
+        const commandParts = lines[0].split(" "); // First line
+        const command = commandParts[0]; // Command itself (!feedback)
+        const inlineArgs = commandParts.slice(1).join(" "); // Inline argument
+        const multiLineArgs = lines.slice(1).join("\n"); // Multi-line argument
+
+        // Final arguments handling
+        const args = inlineArgs || multiLineArgs ? [inlineArgs || multiLineArgs] : [];
         const getRole = await checkRoles(message.author);
 
         // Handle based on role
