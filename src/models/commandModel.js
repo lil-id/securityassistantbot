@@ -12,6 +12,7 @@ const { handleAddAdminCommand } = require('../controllers/admins/addAdminControl
 const { handleAccountCheck, handleAccountMonitorCommand } = require('../controllers/accountMonitorController');
 const { handleServerStatus, handleMonitorCommand, handleThresholdCommand } = require('../controllers/systemMonitorController');
 const { handleBotnetCheck } = require('../controllers/handleBotnetCheck');
+const { fetchLatestThreats } = require('../controllers/handleThreatIntelligence');
 
 const adminCommands = {
     "!admin": handleAddAdminCommand,
@@ -24,6 +25,7 @@ const adminCommands = {
     // "!accmon": handleAccountMonitorCommand,
     "!container": handleContainerStatus,
     "!snap": handleSnapshot,
+    "!hunt": fetchLatestThreats,
     "!botnet": handleBotnetCheck,
     "!response": handleActiveResponseSummary,
     "!feedback": handleFeedback,
@@ -39,6 +41,7 @@ const userCommands = {
     "!account": handleAccountCheck,
     "!container": handleContainerStatus,
     "!snap": handleSnapshot,
+    "!hunt": fetchLatestThreats,
     "!botnet": handleBotnetCheck,
     "!response": handleActiveResponseSummary,
     "!feedback": handleFeedback,

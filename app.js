@@ -8,7 +8,7 @@ const qrcode = require("qrcode-terminal");
 const bodyParser = require("body-parser");
 const routes = require("./src/routes/index");
 const logger = require("./src/helpers/logger");
-const { exec } = require("child_process");
+const { startBotnetCheck } = require("./src/controllers/handleBotnetCheck");
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const { botAdmins } = require("./src/models/admins/adminModel");
 const { checkRoles } = require("./src/helpers/rolesChecker");
@@ -36,7 +36,6 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
 // Middleware
 app.use(
@@ -78,6 +77,8 @@ const groups = {
 // Check if client is ready
 client.on("ready", async () => {
     logger.info("Client is ready!");
+    // Start botnet check every 5 minutes
+    startBotnetCheck(client, { from: groups.alertTrigger });
     // Find group IDs
     async function findGroups() {
         const chats = await client.getChats();
