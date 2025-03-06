@@ -20,6 +20,8 @@ adminHelpMessage += "!botnet - Check malicious IPs botnet\n";
 adminHelpMessage += "!response - View active response summary\n";
 adminHelpMessage += "!feedback - View all feedback\n";
 adminHelpMessage += "!report - View all issues\n";
+// history admin/user || history admin/user analyze
+adminHelpMessage += "!history - Get command history\n";
 adminHelpMessage += "!help - Show this help message\n";
 adminHelpMessage += "!info - Get bot information\n";
 adminHelpMessage += "!stop - Terminate bot\n";

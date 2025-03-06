@@ -13,14 +13,16 @@ async function fetchLatestThreats(client, message, args) {
         const threat = await lookupThreat(commandOption);
         if (threat) {
             const formattedThreat = `
-🔍 *IoC*: \`${threat.ioc}\`
-📋 *Type*: ${threat.threat_type_desc || "N/A"}
-🌐 *IOC Type*: ${threat.ioc_type_desc || "N/A"}
+👤 *Reporter*: ${threat.reporter || "N/A"}
+🎯 *Confidence Level*: (${threat.confidence_level || "N/A"}%)
 ☣️ *Malware Name*: ${threat.malware_printable || "N/A"}
 🔖 *Tags*: ${threat.tags && threat.tags.length > 0 ? threat.tags.map(tag => `#${tag}`).join(", ") : "N/A"}
-🎯 *Confidence Level*: (${threat.confidence_level || "N/A"}%)
-👤 *Reporter*: ${threat.reporter || "N/A"}
-🕒 *First Seen*: ${threat.first_seen || "N/A"}
+🔍 *IoC*: \`${threat.ioc}\`
+⚠️ *IoC Type*: ${threat.ioc_type || "N/A"}
+📋 *IoC Desc*: ${threat.ioc_type_desc || "N/A"}
+⚠️ *Threat Type*: ${threat.threat_type || "N/A"}
+📋 *Threat Desc*: ${threat.threat_type_desc || "N/A"}
+🗓️ *First Seen*: ${threat.first_seen || "N/A"}
 🕵️‍♂️ *More Details*: ${threat.malware_malpedia || "N/A"}`;
             await message.reply(formattedThreat);
         } else {
@@ -46,14 +48,16 @@ async function fetchLatestThreats(client, message, args) {
                         .slice(0, 5)
                         .map(
                             (threat) => `
-🔍 *IoC*: \`${threat.ioc}\`
-📋 *Type*: ${threat.threat_type_desc || "N/A"}
-🌐 *IOC Type*: ${threat.ioc_type_desc || "N/A"}
+👤 *Reporter*: ${threat.reporter || "N/A"}
+🎯 *Confidence Level*: (${threat.confidence_level || "N/A"}%)
 ☣️ *Malware Name*: ${threat.malware_printable || "N/A"}
 🔖 *Tags*: ${threat.tags && threat.tags.length > 0 ? threat.tags.map(tag => `#${tag}`).join(", ") : "N/A"}
-🎯 *Confidence Level*: (${threat.confidence_level || "N/A"}%)
-👤 *Reporter*: ${threat.reporter || "N/A"}
-🕒 *First Seen*: ${threat.first_seen || "N/A"}
+🔍 *IoC*: \`${threat.ioc}\`
+⚠️ *IoC Type*: ${threat.ioc_type || "N/A"}
+📋 *IoC Desc*: ${threat.ioc_type_desc || "N/A"}
+⚠️ *Threat Type*: ${threat.threat_type || "N/A"}
+📋 *Threat Desc*: ${threat.threat_type_desc || "N/A"}
+🗓️ *First Seen*: ${threat.first_seen || "N/A"}
 🕵️‍♂️ *More Details*: ${threat.malware_malpedia || "N/A"}
                             `
                         )

@@ -13,6 +13,7 @@ const { handleAccountCheck, handleAccountMonitorCommand } = require('../controll
 const { handleServerStatus, handleMonitorCommand, handleThresholdCommand } = require('../controllers/systemMonitorController');
 const { handleBotnetCheck } = require('../controllers/handleBotnetCheck');
 const { fetchLatestThreats } = require('../controllers/handleThreatIntelligence');
+const { handleCommandHistory } = require('../controllers/commandHistoryController');
 
 const adminCommands = {
     "!admin": handleAddAdminCommand,
@@ -30,6 +31,7 @@ const adminCommands = {
     "!response": handleActiveResponseSummary,
     "!feedback": handleFeedback,
     "!report": handleReport,
+    "!history": handleCommandHistory, 
     "!help": handleHelp,
     "!info": handleInfo,
     "!stop": handleBotTermination,

@@ -77,8 +77,6 @@ const groups = {
 // Check if client is ready
 client.on("ready", async () => {
     logger.info("Client is ready!");
-    // Start botnet check every 5 minutes
-    startBotnetCheck(client, { from: groups.alertTrigger });
     // Find group IDs
     async function findGroups() {
         const chats = await client.getChats();
@@ -94,6 +92,9 @@ client.on("ready", async () => {
     }
 
     findGroups();
+
+    // Start botnet check every 5 minutes
+    startBotnetCheck(client, groups);
 
     const initializeAdmin = {
         name: "First Admin",

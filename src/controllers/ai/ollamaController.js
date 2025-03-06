@@ -62,7 +62,6 @@ async function handleSecurityRecommendation(req, res) {
     const response = await ollamaModel.sendPrompt(
         `Provide security recommendations based on the following logs:\n${body}`
     );
-    console.log(response);
     res.send(response);
 }
 
