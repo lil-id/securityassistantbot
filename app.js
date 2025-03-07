@@ -19,6 +19,7 @@ const {
 const { adminCommands, userCommands } = require("./src/models/commandModel");
 const { Server } = require("socket.io");
 const { startCronJob } = require("./src/controllers/snapshotController");
+const { startAccountCheck } = require("./src/controllers/accountMonitorController");
 
 // Make sure .env values are loaded
 require("dotenv").config();
@@ -93,7 +94,8 @@ client.on("ready", async () => {
 
     findGroups();
 
-    // Start botnet check every 5 minutes
+    // Start botnet & account check every 5 minutes
+    startAccountCheck(client, groups);
     startBotnetCheck(client, groups);
 
     const initializeAdmin = {

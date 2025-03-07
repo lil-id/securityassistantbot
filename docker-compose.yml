@@ -1,33 +1,60 @@
-# Use postgres/example user/password credentials
 version: "3.9"
 
 services:
   postgres:
     image: postgres
     restart: always
-    # set shared memory limit when using docker-compose
     shm_size: 128mb
-    # or set shared memory limit when deploy via swarm stack
     volumes:
-     - type: tmpfs
-       target: /dev/shm
-       tmpfs:
-         size: 134217728 # 128*2^20 bytes = 128Mb
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 134217728 # 128Mb
     environment:
+      POSTGRES_USER: botuser
       POSTGRES_PASSWORD: example
+      POSTGRES_DB: botdb
     ports:
-      - 5432:5432
+      - "5432:5432"
+    networks:
+      - bot-network
 
   adminer:
     image: adminer
     restart: always
     ports:
-      - 8080:8080
-  
+      - "8006:8080"
+    networks:
+      - bot-network
+    # Uncomment the next line in production
+    # depends_on:
+    #   - postgres
+
   redis:
     image: redis/redis-stack
     container_name: redis-stack
     restart: always
     ports:
-      - 6379:6379
-      - 8001:8001
+      - "6379:6379"
+      - "8001:8001"
+    networks:
+      - bot-network
+    environment:
+      REDIS_PASSWORD: secretpassword
+    command: [ "redis-server", "--requirepass", "secretpassword" ]
+
+  chatbot:
+    container_name: chatbot
+    build: . # Path to Dockerfile
+    ports:
+      - "3001:3001"
+    networks:
+      - bot-network
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+
+networks:
+  bot-network:
+    name: bot-network

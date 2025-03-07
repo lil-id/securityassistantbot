@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const redis = require("ioredis");
+const { redisClient } = require("../helpers/redisConnection");
 const https = require("https");
 const axios = require("axios");
 const logger = require("../helpers/logger");
@@ -9,7 +9,6 @@ const { apiKeyMiddleware } = require("../middleware/wazuhMiddleware");
 require("dotenv").config();
 
 const wazuhRouter = Router();
-const redisClient = new redis();
 
 // Check if IP is malicious using an external threat intelligence API
 async function checkThreatIntel(ip, retries = 3) {

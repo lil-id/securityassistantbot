@@ -46,7 +46,7 @@ async function handleContainerStatus(client, message, args) {
             return;
         } else {
             message.reply(
-                "Please provide argument text.\n\n*!container active* - Get active containers \n*!container exited* - Get exited containers"
+                "Please provide argument text.\n\n`!container active` - Get active containers \n`!container exited` - Get exited containers"
             );
             return;
         }

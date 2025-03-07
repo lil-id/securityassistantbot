@@ -25,8 +25,11 @@ async function handleCommandHistory(client, message, args) {
         await chat.sendSeen();
         await chat.sendStateTyping();
         const [userType, action] = args.join(" ").split(" ");
-
-        if (userType === "admin" && action === undefined) {
+        
+        if (userType === "") {
+            await message.reply("Please provide argument text.\n\n`!history admin` or\n`!history user`");
+            return;
+        } else if (userType === "admin" && action === undefined) {
             logger.info("Fetching admin command history...");
             const adminCommands = await commandHistory.getCommandAdminHistory();
             // Convert log data to text format
@@ -39,7 +42,6 @@ async function handleCommandHistory(client, message, args) {
             fs.writeFileSync(BLOCKLIST_FILE, textContent);
             const media = MessageMedia.fromFilePath(BLOCKLIST_FILE);
             await message.reply(media);
-            await message.reply("Use `!history admin analyze` to analyze the command history");
         } else if (userType === "user" && action === undefined) {
             const userCommands = await commandHistory.getCommandUserHistory();
             logger.info("Fetching user command history...");
@@ -53,7 +55,6 @@ async function handleCommandHistory(client, message, args) {
             fs.writeFileSync(BLOCKLIST_FILE, textContent);
             const media = MessageMedia.fromFilePath(BLOCKLIST_FILE);
             await message.reply(media);
-            await message.reply("Use `!history user analyze` to analyze the command history");
         } else if (userType === "admin" && action === "analyze") {
             await commandHistory.analayzeCommandHistory(message, userType);
         } else {

@@ -37,7 +37,7 @@ async function handleReport(client, message, args) {
             // No report message
             else if (!reportMessage) {
                 await message.reply(
-                    "Please provide report details or provide argument text.\n\n*!report* issue description\n*!report all* - Get all reports \n*!report <userPhoneNumber>* - Get specific report"
+                    "Please provide report details or provide argument text.\n\n`!report` issue description\n`!report all` - Get all reports \n`!report <userPhoneNumber>` - Get specific report"
                 );
                 return;
             }

@@ -1,6 +1,6 @@
 const { getSystemStats, startMonitoring, stopMonitoring, THRESHOLDS } = require("../../src/models/systemMonitor");
+const logger = require("../helpers/logger");
 
-// Example usage with the WhatsApp bot
 async function handleServerStatus(client, message, args) {
     try {
         const chat = await client.getChatById(message.from);
@@ -16,11 +16,12 @@ async function handleServerStatus(client, message, args) {
         await message.reply(response);
 
         // Send alerts to admin if there are any warnings/critical issues
-        if (result.hasAlerts && message.from !== process.env.ADMIN_NUMBER) {
+        if (result.hasAlerts) {
             const alertMessage = `System Alert\n\n${result.alerts.join('\n')}`;
-            await client.sendMessage(process.env.ADMIN_NUMBER, alertMessage);
+            await message.reply(alertMessage);
         }
     } catch (error) {
+        logger.error("Error getting system statistics:", error);
         await message.reply('Error getting system statistics');
     }
 }
@@ -54,7 +55,6 @@ async function handleMonitorCommand(client, message, args) {
     }
 }
 
-// TODO: Need to clarify what this command for
 async function handleThresholdCommand(client, message, args) {
     if (args.length !== 3) {
         await message.reply(

@@ -1,0 +1,16 @@
+[
+  {
+    "username": "nobody",
+    "uid": 65534,
+    "home": "/nonexistent",
+    "shell": "/usr/sbin/nologin",
+    "isSuspicious": true
+  },
+  {
+    "username": "renjerpink",
+    "uid": 1000,
+    "home": "/home/renjerpink",
+    "shell": "/usr/bin/zsh",
+    "isSuspicious": true
+  }
+]

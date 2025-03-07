@@ -4,7 +4,9 @@
   "description": "Your SOC partner that help reduce headache because false positive from SIEM",
   "main": "app.js",
   "scripts": {
+    "production": "node app.js",
     "dev": "npx nodemon app.js",
+    "migration": "npx prisma migrate deploy && npm run production",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "prisma": {
@@ -32,6 +34,7 @@
     "node-cron": "^3.0.3",
     "ollama": "^0.5.11",
     "qrcode-terminal": "^0.12.0",
+    "redis": "^4.7.0",
     "socket.io": "^4.8.1",
     "systeminformation": "^5.25.4",
     "whatsapp-web.js": "^1.26.0",

@@ -32,7 +32,7 @@ async function handleFeedback(client, message, args) {
             // No feedback message
             else if (!feedBackMessage) {
                 await message.reply(
-                    "Please provide feedback details or provide argument text.\n\n*!feedback* issue description\n*!feedback all* - Get all feedbacks \n*!feedback <userPhoneNumber>* - Get specific feedback"
+                    "Please provide feedback details or provide argument text.\n\n`!feedback` issue description\n`!feedback all` - Get all feedbacks \n`!feedback <userPhoneNumber>` - Get specific feedback"
                 );
                 return;
             }
