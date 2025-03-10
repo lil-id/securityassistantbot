@@ -61,7 +61,6 @@ async function handleCommandHistory(client, message, args) {
             await commandHistory.analayzeCommandHistory(message, userType);
         }
     } catch (error) {
-        console.log(error);
         logger.error("Error in handleCommandHistory");
     }
 }

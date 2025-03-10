@@ -1,9 +1,7 @@
 const http = require("http");
-const path = require("path");
 const cors = require("cors");
 const helmet = require("helmet");
 const express = require("express");
-const cron = require("node-cron");
 const qrcode = require("qrcode-terminal");
 const bodyParser = require("body-parser");
 const routes = require("./src/routes/index");
@@ -18,8 +16,8 @@ const {
 } = require("./src/helpers/databaseConnection");
 const { adminCommands, userCommands } = require("./src/models/commandModel");
 const { Server } = require("socket.io");
-const { startCronJob } = require("./src/controllers/snapshotController");
 const { startAccountCheck } = require("./src/controllers/accountMonitorController");
+const { startCronJob } = require("./src/helpers/cronHelper");
 
 // Make sure .env values are loaded
 require("dotenv").config();
@@ -75,6 +73,10 @@ const groups = {
     alertTrigger: "",
 };
 
+const appState = {
+    cronJobRef: null
+};
+
 // Check if client is ready
 client.on("ready", async () => {
     logger.info("Client is ready!");
@@ -128,7 +130,7 @@ client.on("ready", async () => {
     }
 
     // Start the initial cron job
-    let cronJob = startCronJob(cronSchedule, client, groups);
+    appState.cronJobRef = startCronJob(cronSchedule, client, groups);
     logger.info("Initial cron job started.");
 
     // Start the Express server after the WhatsApp client is ready
@@ -199,3 +201,6 @@ app.use((err, req, res, next) => {
     logger.error(err.stack);
     res.status(500).json({ error: "Something went wrong!" });
 });
+
+
+module.exports = { appState };

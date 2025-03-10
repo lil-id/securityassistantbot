@@ -7,7 +7,7 @@
     "production": "node app.js",
     "dev": "npx nodemon app.js",
     "migration": "npx prisma migrate deploy && npm run production",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "jest": "^29.7.0",
     "nodemon": "^3.1.7",
     "prisma": "^6.1.0"
   },

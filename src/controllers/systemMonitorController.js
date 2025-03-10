@@ -6,8 +6,12 @@ async function handleServerStatus(client, message, args) {
         const chat = await client.getChatById(message.from);
         await chat.sendSeen();
         await chat.sendStateTyping();
-        
+
         const result = await getSystemStats();
+        if (!result || !result.stats) {
+            throw new Error("Invalid system statistics data received");
+        }
+
         const response = `System Statistics\n\n` +
                         `${result.stats.cpu}\n` +
                         `${result.stats.memory}\n` +
@@ -15,8 +19,8 @@ async function handleServerStatus(client, message, args) {
         
         await message.reply(response);
 
-        // Send alerts to admin if there are any warnings/critical issues
-        if (result.hasAlerts) {
+        // Send alerts if there are warnings
+        if (result.hasAlerts && result.alerts.length > 0) {
             const alertMessage = `System Alert\n\n${result.alerts.join('\n')}`;
             await message.reply(alertMessage);
         }
@@ -25,6 +29,7 @@ async function handleServerStatus(client, message, args) {
         await message.reply('Error getting system statistics');
     }
 }
+
 
 async function handleMonitorCommand(client, message, args) {
     if (!args.length) {

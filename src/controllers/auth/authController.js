@@ -27,7 +27,6 @@ authRouter.post("/logout", userSession || adminSession, async (req, res) => {
         return res.status(400).json({ status: false, message: "Invalid session" });
     }
 
-    console.log(id);
     const logout = await authModel.logout(id, type);
     res.status(200).json({ data: logout });
 });

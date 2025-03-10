@@ -264,7 +264,7 @@ async function handleActiveResponseSummary(client, message, args) {
         if (keys.length > 0) {
             const alerts = [];
             for (const key of keys) {
-                const alertList = await redisClient.lrange(key, 0, -1);
+                const alertList = await redisClient.lRange(key, 0, -1);
                 alerts.push(...alertList.map(JSON.parse));
             }
 
