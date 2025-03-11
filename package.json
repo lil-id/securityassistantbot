@@ -7,7 +7,7 @@
     "production": "node app.js",
     "dev": "npx nodemon app.js",
     "migration": "npx prisma migrate deploy && npm run production",
-    "test": "jest"
+    "test": "jest --verbose --runInBand"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

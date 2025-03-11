@@ -2,13 +2,12 @@ const handleValidationErrors = require("../../helpers/handleValidationError");
 const jwt = require('jsonwebtoken');
 const { prisma } = require('../../helpers/databaseConnection');
 const Joi = require('joi');
+const logger = require("../../helpers/logger");
 require('dotenv').config();
 
 class Authentication {
     login = async (body) => {
         try {
-            const currentDate = new Date();
-
             const schema = Joi.object({
                 numberPhone: Joi.string()
                     .min(10)
@@ -86,7 +85,7 @@ class Authentication {
                 error: "Unexpected error occurred.",
             };
         } catch (error) {
-            console.error("Login module error", error);
+            logger.error("Login module error", error);
 
             return {
                 status: false,
@@ -221,7 +220,7 @@ class Authentication {
                 code: 200,
             };
         } catch (error) {
-            console.error("Logout module error", error);
+            logger.error("Logout module error", error);
 
             return {
                 status: false,

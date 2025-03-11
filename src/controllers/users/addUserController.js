@@ -24,7 +24,7 @@ async function handleAddUserCommand(client, message, args) {
     );
     if (newUsers.length > 0) {
         const addedUsers = await botUsers.addUsers(newUsers);
-        const addedUsersNames = addedUsers
+        const addedUsersNames = (addedUsers || [])
             .map((name) => `🐨 ${name}`)
             .join("\n");
         await message.reply(

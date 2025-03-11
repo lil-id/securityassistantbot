@@ -24,7 +24,7 @@ async function handleFeedback(client, message, args) {
                 return;
             }
             // Get feedback by phone number
-            else if (phoneNumber.length > 0) {
+            else if (Array.isArray(phoneNumber) && phoneNumber.length > 0) {
                 const feedback = await feedBack.getFeedbackById(phoneNumber);
                 await message.reply(`Feedback from ${names}:\n\n${feedback}`);
                 return;
@@ -47,7 +47,7 @@ async function handleFeedback(client, message, args) {
             // No feedback message
             if (!feedBackMessage) {
                 await message.reply(
-                    "Please provide feedback details or provide argument text.\n\n*!feedback* issue description\n"
+                    "Please provide feedback details or provide argument text.\n\n`!feedback` issue description\n"
                 );
                 return;
             }

@@ -27,7 +27,7 @@ async function handleAddAdminCommand(client, message, args) {
 
     if (newAdmins.length > 0) {
         const addedAdmins = await botAdmins.addAdmins(newAdmins);
-        const addedAdminsNames = addedAdmins
+        const addedAdminsNames = (addedAdmins || [])
             .map((name) => `🐨 ${name}`)
             .join("\n");
         await message.reply(

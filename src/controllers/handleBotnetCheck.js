@@ -79,9 +79,13 @@ async function fetchAndCompareIPs(client, groups) {
     }
 }
 
-function startBotnetCheck(client, groups, interval = 5 * 60 * 1000) {
-    fetchAndCompareIPs(client, groups); // Initial check
-    setInterval(() => fetchAndCompareIPs(client, groups), interval);
+function startBotnetCheck(client, groups, interval = 5 * 60 * 1000, fetchFunction = fetchAndCompareIPs) {
+    fetchFunction(client, groups);
+    const intervalId = setInterval(() => {
+        fetchFunction(client, groups);
+    }, interval);
+
+    return intervalId;
 }
 
-module.exports = { handleBotnetCheck, startBotnetCheck };
+module.exports = { handleBotnetCheck, startBotnetCheck, fetchAndCompareIPs };

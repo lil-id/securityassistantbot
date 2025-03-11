@@ -172,12 +172,12 @@ client.on("ready", async () => {
             });
 
             if (adminHandler) {
-                await adminHandler(client, message, args, groups, cronJob, cronJobSchedule);
+                await adminHandler(client, message, args, groups, appState.cronJobRef, cronJobSchedule);
             }
         } else {
             const userHandler = userCommands[command];
             if (userHandler) {
-                await userHandler(client, message, args, groups, cronJob, cronJobSchedule);
+                await userHandler(client, message, args, groups, appState.cronJobRef, cronJobSchedule);
             }
         }
     });

@@ -1,6 +1,7 @@
 const logger = require("../helpers/logger");
 const { dockerMonitor } = require("../models/containerMonitor");
 
+// TODO: Need to create unit tests for this function also implement dockerode to get list of container when this node app running inside container
 async function handleContainerStatus(client, message, args) {
     const commandOption = args.join(" ");
     try {

@@ -31,11 +31,12 @@ async function handleSnapshot(client, message, args, groups) {
                 message.reply("Successfully created and uploaded snapshot to Cloud Storage.");
             }
         );
+        await message.reply("If you want to schedule a snapshot at custom time, use\n\n`!snap <cron_schedule>`\n\nExample:\n\n`!snap 59 23 * * *`");
     } else if (args.length >= 1 && args.length <= 6) {
         const newSchedule = args.map(part => (part === '' ? '*' : part)).join(' ');
 
         if (!validateCronSchedule(newSchedule)) {
-            await message.reply("Invalid cron schedule format.\nExample: !snap 59 23 * * *");
+            await message.reply("Invalid cron schedule format.\n\nExample: `!snap 59 23 * * *`");
             return;
         }
 
@@ -71,7 +72,7 @@ async function handleSnapshot(client, message, args, groups) {
         logger.info(`Cron schedule successfully updated to: ${newSchedule}`);
         await message.reply(`Cron schedule successfully updated to: ${newSchedule}`);
     } else {
-        await message.reply("Usage: !snap <cron_schedule>\nExample: !snap 59 23 * * *");
+        await message.reply("Usage: !snap <cron_schedule>\n\nExample: `!snap 59 23 * * *`");
     }
 }
 
