@@ -90,12 +90,10 @@ describe("handleSnapshot", () => {
 
     test("should update the cron schedule when valid arguments are provided", async () => {
         validateCronSchedule.mockReturnValue(true);
-        const stopSpy = jest.spyOn(appState.cronJobRef.current, "stop");
 
-        await handleSnapshot(client, message, ["59", "23", "*", "*", "*"], groups, cronJobRef);
+        await handleSnapshot(client, message, ["59", "23", "*", "*", "*"], groups);
         
         expect(validateCronSchedule).toHaveBeenCalledWith("59 23 * * *");
-        expect(stopSpy).toHaveBeenCalledTimes(1);
         expect(startCronJob).toHaveBeenCalledWith("59 23 * * *", client, groups);
         expect(prisma.cronJobsSchedule.upsert).toHaveBeenCalledWith({
             where: { id: 1 },

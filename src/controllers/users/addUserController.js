@@ -7,6 +7,11 @@ async function handleAddUserCommand(client, message, args) {
     await chat.sendStateTyping();
 
     const getMentionsNames = await message.getMentions();
+
+    if (!getMentionsNames || getMentionsNames.length === 0) {
+        message.reply("No valid users mentioned.");
+    }
+
     const existingUsers = await botUsers.checkExistingUsers(getMentionsNames);
 
     if (existingUsers.length > 0) {

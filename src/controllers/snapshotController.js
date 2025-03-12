@@ -2,7 +2,6 @@ const { exec } = require("child_process");
 const logger = require("../helpers/logger");
 const { prisma } = require("../helpers/databaseConnection");
 const { startCronJob, validateCronSchedule } = require("../helpers/cronHelper");
-const { appState } = require("../../app");
 
 async function handleSnapshot(client, message, args, groups) {
     if (args.length === 0) {
@@ -31,22 +30,17 @@ async function handleSnapshot(client, message, args, groups) {
                 message.reply("Successfully created and uploaded snapshot to Cloud Storage.");
             }
         );
-        await message.reply("If you want to schedule a snapshot at custom time, use\n\n`!snap <cron_schedule>`\n\nExample:\n\n`!snap 59 23 * * *`");
+        await message.reply("If you want to schedule a snapshot at custom time, use\n\n📌 *Cron format:*\n`sec min hour day month week`\n🔢 *Value ranges:*\n- ⏳ Second: `0-59`\n- ⏰ Minute: `0-59`\n- 🕛 Hour: `0-23`\n- 📅 Day of Month: `1-31`\n- 🗓️ Month: `1-12` (or names)\n- 📆 Day of Week: `0-7` (or names, 0 & 7 = Sunday)\n\n✅ Example:\n`!snap 59 23 * * *` → Runs at *11:59 PM* daily");
     } else if (args.length >= 1 && args.length <= 6) {
         const newSchedule = args.map(part => (part === '' ? '*' : part)).join(' ');
 
         if (!validateCronSchedule(newSchedule)) {
-            await message.reply("Invalid cron schedule format.\n\nExample: `!snap 59 23 * * *`");
+            await message.reply("🕒 *Invalid cron format!*\n\n📌 *Correct format:*\n`sec min hour day month week`\n🔢 *Value ranges:*\n- ⏳ Second: `0-59`\n- ⏰ Minute: `0-59`\n- 🕛 Hour: `0-23`\n- 📅 Day of Month: `1-31`\n- 🗓️ Month: `1-12` (or names)\n- 📆 Day of Week: `0-7` (or names, 0 & 7 = Sunday)\n\n✅ Example:\n`!snap 59 23 * * *` → Runs at *11:59 PM* daily");
             return;
         }
 
-        // Stop the existing cron job
-        if (appState.cronJobRef.current) {
-            appState.cronJobRef.current.stop();
-        }        
-
         // Start a new cron job with the new schedule
-        appState.cronJobRef.current = startCronJob(newSchedule, client, groups);
+        startCronJob(newSchedule, client, groups);
 
         // Parse the cron schedule
         const [minute, hour, dayOfMonth, month, dayOfWeek] = newSchedule.split(" ");
@@ -72,7 +66,7 @@ async function handleSnapshot(client, message, args, groups) {
         logger.info(`Cron schedule successfully updated to: ${newSchedule}`);
         await message.reply(`Cron schedule successfully updated to: ${newSchedule}`);
     } else {
-        await message.reply("Usage: !snap <cron_schedule>\n\nExample: `!snap 59 23 * * *`");
+        await message.reply("📌 *Cron format:*\n`sec min hour day month week`\n🔢 *Value ranges:*\n- ⏳ Second: `0-59`\n- ⏰ Minute: `0-59`\n- 🕛 Hour: `0-23`\n- 📅 Day of Month: `1-31`\n- 🗓️ Month: `1-12` (or names)\n- 📆 Day of Week: `0-7` (or names, 0 & 7 = Sunday)\n\n✅ Example:\n`!snap 59 23 * * *` → Runs at *11:59 PM* daily");
     }
 }
 

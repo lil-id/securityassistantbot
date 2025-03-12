@@ -63,7 +63,7 @@ const client = new Client({
 // Generate QR code for authentication
 client.on("qr", (qr) => {
     qrcode.generate(qr, { small: true });
-    logger.info("QR Code generated. Please scan with WhatsApp.");
+    logger.info("QR Code generated. Please scan with your WhatsApp app.");
 });
 
 // Store group IDs
@@ -71,10 +71,6 @@ const groups = {
     announcement: "",
     member: "",
     alertTrigger: "",
-};
-
-const appState = {
-    cronJobRef: null
 };
 
 // Check if client is ready
@@ -130,7 +126,7 @@ client.on("ready", async () => {
     }
 
     // Start the initial cron job
-    appState.cronJobRef = startCronJob(cronSchedule, client, groups);
+    startCronJob(cronSchedule, client, groups);
     logger.info("Initial cron job started.");
 
     // Start the Express server after the WhatsApp client is ready
@@ -172,12 +168,12 @@ client.on("ready", async () => {
             });
 
             if (adminHandler) {
-                await adminHandler(client, message, args, groups, appState.cronJobRef, cronJobSchedule);
+                await adminHandler(client, message, args, groups);
             }
         } else {
             const userHandler = userCommands[command];
             if (userHandler) {
-                await userHandler(client, message, args, groups, appState.cronJobRef, cronJobSchedule);
+                await userHandler(client, message, args, groups);
             }
         }
     });
@@ -201,6 +197,3 @@ app.use((err, req, res, next) => {
     logger.error(err.stack);
     res.status(500).json({ error: "Something went wrong!" });
 });
-
-
-module.exports = { appState };
