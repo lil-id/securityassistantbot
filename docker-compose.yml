@@ -43,6 +43,24 @@ services:
       REDIS_PASSWORD: secretpassword
     command: [ "redis-server", "--requirepass", "secretpassword" ]
 
+
+  nodeapp:
+    build: .
+    container_name: chatbot-app
+    ports:
+      - "3001:3001"  # Change the port if needed
+    volumes:
+      - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock  # Mount Docker socket
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+    networks:
+      - bot-network
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+
   # chatbot:
   #   container_name: chatbot
   #   build: . # Path to Dockerfile

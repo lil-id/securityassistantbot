@@ -1,6 +1,7 @@
 const { handleAddUserCommand } = require("../src/controllers/users/addUserController");
 const { botUsers } = require("../src/models/users/userModel");
-const { userHelpMessage } = require("../src/views/responseMessage");
+
+// TODO: Need fix this error, running npm run test to see the error messages 
 
 jest.mock("../src/models/users/userModel");
 jest.mock("../src/views/responseMessage");

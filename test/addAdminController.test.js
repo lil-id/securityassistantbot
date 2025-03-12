@@ -1,7 +1,7 @@
 const { handleAddAdminCommand } = require("../src/controllers/admins/addAdminController");
 const { botAdmins } = require("../src/models/admins/adminModel");
 const { adminHelpMessage } = require("../src/views/responseMessage");
-// TODO: Need fix this error, running npm run test to see the error messages 
+
 jest.mock("../src/models/admins/adminModel");
 jest.mock("../src/views/responseMessage", () => ({
     adminHelpMessage: "Help message for admins"
