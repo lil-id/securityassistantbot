@@ -28,7 +28,7 @@ function startCronJob(schedule, client, groups) {
         );
 
         exec(
-            "bash src/scripts/systemSnapshot.sh",
+            "sh src/scripts/systemSnapshot.sh",
             { maxBuffer: 1024 * 1024 * 10 },
             (error, stdout, stderr) => {
                 if (error) {

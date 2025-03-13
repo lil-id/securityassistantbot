@@ -44,34 +44,23 @@ services:
     command: [ "redis-server", "--requirepass", "secretpassword" ]
 
 
-  nodeapp:
+  chatbotapp:
     build: .
     container_name: chatbot-app
     ports:
-      - "3001:3001"  # Change the port if needed
+      - "3001:3001"
     volumes:
       - .:/app
-      - /var/run/docker.sock:/var/run/docker.sock  # Mount Docker socket
-    environment:
-      DOCKER_HOST: unix:///var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock
+    user: "chrome"
+    group_add:
+      - "999"  # This is your host's docker group ID
     networks:
       - bot-network
     restart: always
     depends_on:
       - postgres
       - redis
-
-  # chatbot:
-  #   container_name: chatbot
-  #   build: . # Path to Dockerfile
-  #   ports:
-  #     - "3001:3001"
-  #   networks:
-  #     - bot-network
-  #   restart: always
-  #   depends_on:
-  #     - postgres
-  #     - redis
 
 networks:
   bot-network:

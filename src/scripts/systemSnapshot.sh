@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Define snapshot file name
 SNAPSHOT_FILE="system_snapshot_$(date +%Y%m%d%H%M%S).tar.gz"

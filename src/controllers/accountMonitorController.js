@@ -14,7 +14,7 @@ async function handleAccountCheck(client, message, args) {
         await chat.sendStateTyping();
 
         logger.info("Running system account script...");
-        execSync("bash src/scripts/systemAccount.sh", { stdio: "ignore" });
+        execSync("sh src/scripts/systemAccount.sh", { stdio: "ignore" });
 
         const accounts = getAllAccounts();
         const suspiciousAccounts = accounts.filter(account => account.isSuspicious);
@@ -36,7 +36,7 @@ async function handleAccountCheck(client, message, args) {
 async function fetchAccountCheck(client, groups) {
     try {
         logger.info("Running system account script...");
-        execSync("bash src/scripts/systemAccount.sh", { stdio: "ignore" });
+        execSync("sh src/scripts/systemAccount.sh", { stdio: "ignore" });
 
         const accounts = getAllAccounts();
         const suspiciousAccounts = accounts.filter(account => account.isSuspicious);

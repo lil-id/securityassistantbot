@@ -13,7 +13,7 @@ async function handleSnapshot(client, message, args, groups) {
         await message.reply("Creating system snapshot...");
 
         exec(
-            "bash src/scripts/systemSnapshot.sh",
+            "sh src/scripts/systemSnapshot.sh",
             { maxBuffer: 1024 * 1024 * 10 },
             (error, stdout, stderr) => {
                 if (error) {

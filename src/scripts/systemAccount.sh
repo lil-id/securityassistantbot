@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Define the correct relative path to the Node.js project directory
 BASE_DIR="$(dirname "$(realpath "$0")")/.."  # Moves one level up from the `scripts` directory
