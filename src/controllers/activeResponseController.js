@@ -115,15 +115,22 @@ async function sendAlertMessage(client, groups, alert) {
             getAbuseIpDB.data && "AbuseIP DB"
         ].filter(Boolean);
     
-        const confidenceLevel = getThreatFox?.confidence_level ?? getAbuseIpDB.data?.abuseConfidenceScore;
-        console.log(foundIn, confidenceLevel);
-        await client.sendMessage(
-            groups.announcement,
-            `Threat Intelligence Alert!\n` +
-            `🌐 *Malicious IP:* ${alert.src_ip}\n` +
-            `🕵️‍♂️ *Found at:* ${foundIn.join(", ")}\n` +
-            `🎯 *Confidence Level:* ${confidenceLevel}\n`
-        );
+        if (foundIn.length === 0 || confidenceLevel === null || confidenceLevel === undefined) {
+            await client.sendMessage(
+                groups.announcement,
+                `No Threat Intelligence Data Found!\n` +
+                `🌐 *IP:* ${alert.src_ip}\n` +
+                `⚠️ This IP is not found in AbuseIP DB or ThreatFox.`
+            );
+        } else {
+            await client.sendMessage(
+                groups.announcement,
+                `Threat Intelligence Alert!\n` +
+                `🌐 *Malicious IP:* ${alert.src_ip}\n` +
+                `🕵️‍♂️ *Found at:* ${foundIn.join(", ")}\n` +
+                `🎯 *Confidence Level:* ${confidenceLevel}`
+            );
+        }
     } else {
         logger.info("No ThreatFox or Abuse IP DB data found for this IP.");
     }    
