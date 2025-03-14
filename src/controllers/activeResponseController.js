@@ -6,12 +6,13 @@ const logger = require("../helpers/logger");
 const userSession = require("../middleware/usersMiddleware");
 const adminSession = require("../middleware/adminsMiddleware");
 const { apiKeyMiddleware } = require("../middleware/wazuhMiddleware");
+const { lookupThreat } = require("./handleThreatIntelligence");
 require("dotenv").config();
 
 const wazuhRouter = Router();
 
 // Check if IP is malicious using an external threat intelligence API
-async function checkThreatIntel(ip, retries = 3) {
+async function abuseIpDBCheck(ip, retries = 3) {
     logger.info(`Checking threat intelligence for IP: ${ip}`);
     try {
         const response = await axios.get(
@@ -22,17 +23,26 @@ async function checkThreatIntel(ip, retries = 3) {
                 signal: AbortSignal.timeout(5000),
             }
         );
-        return response.data.data.abuseConfidenceScore >= 50; // Mark if abuse score is high
+        const confidenceScore = response.data.data.abuseConfidenceScore;
+        return {
+            isMalicious: confidenceScore >= 50,
+            data: response.data.data
+        };
     } catch (error) {
         if (error.code === "ETIMEDOUT" && retries > 0) {
             logger.warn(
                 `Timeout occurred. Retrying... (${retries} retries left)`
             );
-            return checkThreatIntel(ip, retries - 1);
+            return abuseIpDBCheck(ip, retries - 1);
         }
         logger.error("Threat intelligence check failed", error);
-        return false;
+        return { isMalicious: false, data: null };
     }
+}
+
+async function threatFoxCheck(ioc) {
+    const threatFoxResult = await lookupThreat(ioc);
+    return threatFoxResult;
 }
 
 // Track alerts from the same IP
@@ -41,12 +51,12 @@ async function trackAlert(ip) {
     let count = await redisClient.get(key);
 
     if (!count) {
-        await redisClient.setex(key, 600, 1); // Set TTL of 10 minutes
+        await redisClient.setEx(key, 600, "1"); // Set TTL of 10 minutes
         return 1; // First occurrence
     }
 
-    count = parseInt(count) + 1;
-    await redisClient.setex(key, 600, count); // Reset TTL on update
+    count = (parseInt(count) + 1).toString();
+    await redisClient.setEx(key, 600, count); // Reset TTL on update
     return count;
 }
 
@@ -54,7 +64,7 @@ async function trackAlert(ip) {
 async function storeAlert(alert) {
     logger.info("Storing alert in Redis");
     const key = `alerts:${alert.src_ip}`;
-    await redisClient.rpush(key, JSON.stringify(alert)); // Push alert to list
+    await redisClient.rPush(key, JSON.stringify(alert)); // Push alert to list
     await redisClient.expire(key, 600); // Set expiration to 10 minutes
 }
 
@@ -62,10 +72,15 @@ async function storeAlert(alert) {
 async function isInteresting(alert) {
     if (alert.level >= 5) {
         // Always check if the source IP is malicious
-        const isMalicious = await checkThreatIntel(alert.src_ip);
-        
-        // Check alert severity
-        if (isMalicious) return true; // Critical alerts are always interesting
+        const [abuseIpDBResult, threatFoxResult] = await Promise.all([
+            abuseIpDBCheck(alert.src_ip),
+            threatFoxCheck(alert.src_ip)
+        ]);
+
+        // Check if any source considers the IP malicious
+        if (abuseIpDBResult.isMalicious || threatFoxResult) {
+            return true;
+        }
 
         return (
             alert.groups.includes("authentication_failed") &&
@@ -88,6 +103,30 @@ async function sendAlertMessage(client, groups, alert) {
         `📋 *Full Log*: ${alert.full_log}\n` +
         `🔗 *Link Detail*: ${process.env.LOG_URL}\n`
     );
+
+    await client.sendMessage(groups.announcement, "Running Threat Intelligence checks...");
+
+    const getThreatFox = await threatFoxCheck(alert.src_ip);
+    const getAbuseIpDB = await abuseIpDBCheck(alert.src_ip);
+
+    if (getThreatFox || getAbuseIpDB) {
+        const foundIn = [
+            getThreatFox && "ThreatFox",
+            getAbuseIpDB.data && "AbuseIP DB"
+        ].filter(Boolean);
+    
+        const confidenceLevel = getThreatFox?.confidence_level ?? getAbuseIpDB.data?.abuseConfidenceScore;
+        console.log(foundIn, confidenceLevel);
+        await client.sendMessage(
+            groups.announcement,
+            `Threat Intelligence Alert!\n` +
+            `🌐 *Malicious IP:* ${alert.src_ip}\n` +
+            `🕵️‍♂️ *Found at:* ${foundIn.join(", ")}\n` +
+            `🎯 *Confidence Level:* ${confidenceLevel}\n`
+        );
+    } else {
+        logger.info("No ThreatFox or Abuse IP DB data found for this IP.");
+    }    
 }
 
 // Handle alert escalation
@@ -95,9 +134,8 @@ async function handleAlertEscalation(client, groups, alert) {
     if (await isInteresting(alert)) {
         logger.info("🚨 Interesting alert detected! Escalating...");
         await sendAlertMessage(client, groups, alert);
-    } else {
-        logger.info("⚠️ False positive detected. Ignoring...");
     }
+    return null;
 }
 
 // Handle alert notification
@@ -108,20 +146,20 @@ async function triggerActiveReponseNotification(client, groups, alert, count) {
         );
         await client.sendMessage(
             groups.alertTrigger,
-            `🔄 Alert from *${alert.src_ip}* triggered ${count} times.`
+            `🔄 Alert from *${alert.src_ip}* at *${alert.agent}* triggered ${count} times.`
         );
 
-        const isTrigger = await triggerActiveReponse(alert.id, alert.src_ip);
+        // const isTrigger = await triggerActiveReponse(alert.id, alert.src_ip);
         
-        if (isTrigger) {
-            logger.info(
-                `🔥 Active response triggered for ${alert.src_ip}.`
-            );
-            await client.sendMessage(
-                groups.alertTrigger,
-                `🤖 Automatically block for *${alert.src_ip}*`
-            );
-        }
+        // if (isTrigger) {
+        //     logger.info(
+        //         `🔥 Active response triggered for ${alert.src_ip}.`
+        //     );
+        //     await client.sendMessage(
+        //         groups.alertTrigger,
+        //         `🤖 Automatically block for *${alert.src_ip}*`
+        //     );
+        // }
     } else {
         logger.warn("Invalid alert ID. Skipping active response...");
     }
@@ -144,21 +182,24 @@ async function processRule5402Alert(client, groups, alert) {
 
 // Process incoming alert
 async function processAlert(alert, client, groups) {
-    await storeAlert(alert);
-    const count = await trackAlert(alert.src_ip);
-    logger.info(
-        count === 1
-            ? "🔍 New alert detected!"
-            : "🔍 Alert already detected. Incrementing count..."
-    );
-    if (alert.rule === "5402" && alert.level === 3) {
+    if (alert.level >= 5) {
+        await storeAlert(alert);
+        const count = await trackAlert(alert.src_ip);
+        logger.info(
+            count === 1
+                ? "🔍 New alert detected!"
+                : `🔄 Alert from ${alert.src_ip} triggered ${count} times.`
+        );
+
+        if (count === 1) {
+            await handleAlertEscalation(client, groups, alert);
+        } else if (count % 5 === 0) {
+            await triggerActiveReponseNotification(client, groups, alert, count);
+        }
+    } else if (alert.rule === "5402" && alert.level === 3) {
         await processRule5402Alert(client, groups, alert);
-    } else if (count === 1 && alert.level >= 5) {
-        await handleAlertEscalation(client, groups, alert);
-    } else if (count % 5 === 0 && alert.level >= 5) {
-        await triggerActiveReponseNotification(client, groups, alert, count);
     } else {
-        logger.info(`🔄 Alert from ${alert.src_ip} triggered ${count} times.`);
+        logger.info(`Ignoring alert (level ${alert.level}) from ${alert.src_ip}.`);
     }
 }
 
@@ -201,7 +242,7 @@ function setupActiveResponseRoutes(client, groups, io) {
             // Emit alert to WebSocket clients
             io.emit("alert", alert);
 
-            if ((alert.rule.id === "5402" || alert.rule.level >= 5) && !alert.rule.id.startsWith("2350")) {
+            if ((alert.rule.id === "5402" || alert.rule.level >= 3) && !alert.rule.id.startsWith("2350")) {
                 processAlert(reformatAlert, client, groups);
                 res.status(200).json({ status: "Alert received successfully" });
             } else {
@@ -246,7 +287,7 @@ wazuhRouter.get("/alerts/summary", allowEitherSession, async (req, res) => {
         res.json(alerts);
     } catch (error) {
         if (!res.headersSent) {
-            console.error("Error fetching alerts:", error);
+            logger.error("Error fetching alerts:", error);
             res.status(500).json({ error: "Internal Server Error" });
         }
     }

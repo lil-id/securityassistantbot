@@ -70,7 +70,7 @@ async function fetchAndCompareIPs(client, groups) {
                 .join("\n");
 
             await client.sendMessage(groups.alertTrigger, `New Malicious IPs Botnet List:\n\n${maliciousIPs}`);
-            logger.info(`Sent ${newMaliciousIPs.length} new malicious IPs to WhatsApp.`);
+            logger.info(`Send ${newMaliciousIPs.length} new malicious IPs to WhatsApp.`);
         } else {
             logger.info("No new malicious IPs found.");
         }

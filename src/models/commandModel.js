@@ -14,6 +14,7 @@ const { handleServerStatus, handleMonitorCommand, handleThresholdCommand } = req
 const { handleBotnetCheck } = require('../controllers/handleBotnetCheck');
 const { fetchLatestThreats } = require('../controllers/handleThreatIntelligence');
 const { handleCommandHistory } = require('../controllers/commandHistoryController');
+const { getMalwareList } = require('../controllers/handleMalwareList');
 
 const adminCommands = {
     "!admin": handleAddAdminCommand,
@@ -27,6 +28,7 @@ const adminCommands = {
     "!container": handleContainerStatus,
     "!snap": handleSnapshot,
     "!hunt": fetchLatestThreats,
+    "!malware": getMalwareList,
     "!botnet": handleBotnetCheck,
     "!response": handleActiveResponseSummary,
     "!feedback": handleFeedback,
@@ -44,6 +46,7 @@ const userCommands = {
     "!container": handleContainerStatus,
     "!snap": handleSnapshot,
     "!hunt": fetchLatestThreats,
+    "!malware": getMalwareList,
     "!botnet": handleBotnetCheck,
     "!response": handleActiveResponseSummary,
     "!feedback": handleFeedback,
