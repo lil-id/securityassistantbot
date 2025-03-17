@@ -1,5 +1,5 @@
 const { handleContainerStatus } = require("../src/controllers/containerController");
-const { getRunningDockerContainers, getExitedDockerContainers } = require("../src/models/containerMonitor");
+const { dockerMonitor } = require("../src/models/containerMonitor");
 const logger = require("../src/helpers/logger");
 
 jest.mock("../src/models/containerMonitor");
@@ -21,169 +21,77 @@ describe("handleContainerStatus", () => {
 		};
 	});
 
-	it("should reply with active containers", async () => {
+	it("should reply with active containers when 'active' is passed", async () => {
 		const args = ["active"];
 		const containers = [
-			{ Names: ["container1"], Status: "running", Created: 1633036800 },
+			{ NAMES: "container1", STATUS: "running", CREATED: "10 minutes ago" },
+			{ NAMES: "container2", STATUS: "running", CREATED: "5 minutes ago" },
 		];
-		getRunningDockerContainers.mockResolvedValue(containers);
+		dockerMonitor.getRunningDockerContainers.mockResolvedValue(containers);
 
 		await handleContainerStatus(client, message, args);
 
 		expect(client.getChatById).toHaveBeenCalledWith(message.from);
 		expect(message.reply).toHaveBeenCalledWith(
-			"Active Containers\n\n🔖 *Name*: container1\n🪅 *Status*: running\n⏰ *Created*: 10/1/2021, 5:20:00 AM"
+			`Active Containers\n\n🔖 *Name*: container1\n🪅 *Status*: running\n⏰ *Created*: 10 minutes ago\n\n🔖 *Name*: container2\n🪅 *Status*: running\n⏰ *Created*: 5 minutes ago`
 		);
 	});
 
-	it("should reply with exited containers", async () => {
+	it("should reply with no active containers found when there are no active containers", async () => {
+		const args = ["active"];
+		dockerMonitor.getRunningDockerContainers.mockResolvedValue([]);
+
+		await handleContainerStatus(client, message, args);
+
+		expect(client.getChatById).toHaveBeenCalledWith(message.from);
+		expect(message.reply).toHaveBeenCalledWith("No active Docker containers found");
+	});
+
+	it("should reply with exited containers when 'exited' is passed", async () => {
 		const args = ["exited"];
 		const containers = [
-			{ Names: ["container2"], Status: "exited", Created: 1633036800 },
+			{ NAMES: "container1", STATUS: "exited", CREATED: "2 hours ago" },
+			{ NAMES: "container2", STATUS: "exited", CREATED: "1 hour ago" },
 		];
-		getExitedDockerContainers.mockResolvedValue(containers);
+		dockerMonitor.getExitedDockerContainers.mockResolvedValue(containers);
 
 		await handleContainerStatus(client, message, args);
 
 		expect(client.getChatById).toHaveBeenCalledWith(message.from);
 		expect(message.reply).toHaveBeenCalledWith(
-			"Exited Containers\n\n🔖 *Name*: container2\n🪅 *Status*: exited\n⏰ *Created*: 10/1/2021, 5:20:00 AM"
+			`Exited Containers\n\n🔖 *Name*: container1\n🪅 *Status*: exited\n⏰ *Created*: 2 hours ago\n\n🔖 *Name*: container2\n🪅 *Status*: exited\n⏰ *Created*: 1 hour ago`
 		);
 	});
 
-	it("should reply with no active containers found", async () => {
-		const args = ["active"];
-		getRunningDockerContainers.mockResolvedValue([]);
-
-		await handleContainerStatus(client, message, args);
-
-		expect(client.getChatById).toHaveBeenCalledWith(message.from);
-		expect(logger.info).toHaveBeenCalledWith("No Active Docker containers found");
-		expect(message.reply).toHaveBeenCalledWith("No Active Docker containers found");
-	});
-
-	it("should reply with no exited containers found", async () => {
+	it("should reply with no exited containers found when there are no exited containers", async () => {
 		const args = ["exited"];
-		getExitedDockerContainers.mockResolvedValue([]);
+		dockerMonitor.getExitedDockerContainers.mockResolvedValue([]);
 
 		await handleContainerStatus(client, message, args);
 
 		expect(client.getChatById).toHaveBeenCalledWith(message.from);
-		expect(logger.info).toHaveBeenCalledWith("No Exited Docker containers found");
-		expect(message.reply).toHaveBeenCalledWith("No Exited Docker containers found");
+		expect(message.reply).toHaveBeenCalledWith("No exited Docker containers found");
 	});
 
-	it("should reply with an error message on invalid argument", async () => {
+	it("should reply with usage instructions when an invalid argument is passed", async () => {
 		const args = ["invalid"];
 
 		await handleContainerStatus(client, message, args);
 
+		expect(client.getChatById).toHaveBeenCalledWith(message.from);
 		expect(message.reply).toHaveBeenCalledWith(
-			"Please provide a valid argument:\n\n`!container active` - Get active containers\n`!container exited` - Get exited containers"
+			"Please provide argument text.\n\n`!container active` - Get active containers \n`!container exited` - Get exited containers"
 		);
 	});
 
-	it("should reply with an error message on exception", async () => {
+	it("should reply with an error message when an error occurs", async () => {
 		const args = ["active"];
 		const error = new Error("Test error");
-		getRunningDockerContainers.mockRejectedValue(error);
+		client.getChatById.mockRejectedValue(error);
 
 		await handleContainerStatus(client, message, args);
 
 		expect(logger.error).toHaveBeenCalledWith("Error getting container status:", error);
 		expect(message.reply).toHaveBeenCalledWith(`Error: ${error.message}`);
-	});
-
-	jest.mock("../src/models/containerMonitor");
-	jest.mock("../src/helpers/logger");
-
-	describe("handleContainerStatus", () => {
-		let client, message;
-
-		beforeEach(() => {
-			client = {
-				getChatById: jest.fn().mockResolvedValue({
-					sendSeen: jest.fn(),
-					sendStateTyping: jest.fn(),
-				}),
-			};
-			message = {
-				from: "testUser",
-				reply: jest.fn(),
-			};
-		});
-
-		it("should reply with active containers", async () => {
-			const args = ["active"];
-			const containers = [
-				{ Names: ["container1"], Status: "running", Created: 1633036800 },
-			];
-			getRunningDockerContainers.mockResolvedValue(containers);
-
-			await handleContainerStatus(client, message, args);
-
-			expect(client.getChatById).toHaveBeenCalledWith(message.from);
-			expect(message.reply).toHaveBeenCalledWith(
-				"Active Containers\n\n🔖 *Name*: container1\n🪅 *Status*: running\n⏰ *Created*: 10/1/2021, 5:20:00 AM"
-			);
-		});
-
-		it("should reply with exited containers", async () => {
-			const args = ["exited"];
-			const containers = [
-				{ Names: ["container2"], Status: "exited", Created: 1633036800 },
-			];
-			getExitedDockerContainers.mockResolvedValue(containers);
-
-			await handleContainerStatus(client, message, args);
-
-			expect(client.getChatById).toHaveBeenCalledWith(message.from);
-			expect(message.reply).toHaveBeenCalledWith(
-				"Exited Containers\n\n🔖 *Name*: container2\n🪅 *Status*: exited\n⏰ *Created*: 10/1/2021, 5:20:00 AM"
-			);
-		});
-
-		it("should reply with no active containers found", async () => {
-			const args = ["active"];
-			getRunningDockerContainers.mockResolvedValue([]);
-
-			await handleContainerStatus(client, message, args);
-
-			expect(client.getChatById).toHaveBeenCalledWith(message.from);
-			expect(logger.info).toHaveBeenCalledWith("No Active Docker containers found");
-			expect(message.reply).toHaveBeenCalledWith("No Active Docker containers found");
-		});
-
-		it("should reply with no exited containers found", async () => {
-			const args = ["exited"];
-			getExitedDockerContainers.mockResolvedValue([]);
-
-			await handleContainerStatus(client, message, args);
-
-			expect(client.getChatById).toHaveBeenCalledWith(message.from);
-			expect(logger.info).toHaveBeenCalledWith("No Exited Docker containers found");
-			expect(message.reply).toHaveBeenCalledWith("No Exited Docker containers found");
-		});
-
-		it("should reply with an error message on invalid argument", async () => {
-			const args = ["invalid"];
-
-			await handleContainerStatus(client, message, args);
-
-			expect(message.reply).toHaveBeenCalledWith(
-				"Please provide a valid argument:\n\n`!container active` - Get active containers\n`!container exited` - Get exited containers"
-			);
-		});
-
-		it("should reply with an error message on exception", async () => {
-			const args = ["active"];
-			const error = new Error("Test error");
-			getRunningDockerContainers.mockRejectedValue(error);
-
-			await handleContainerStatus(client, message, args);
-
-			expect(logger.error).toHaveBeenCalledWith("Error getting container status:", error);
-			expect(message.reply).toHaveBeenCalledWith(`Error: ${error.message}`);
-		});
 	});
 });

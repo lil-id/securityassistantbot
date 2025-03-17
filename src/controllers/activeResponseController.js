@@ -114,6 +114,8 @@ async function sendAlertMessage(client, groups, alert) {
             getThreatFox && "ThreatFox",
             getAbuseIpDB.data && "AbuseIP DB"
         ].filter(Boolean);
+
+        const confidenceLevel = getThreatFox?.confidence_level ?? getAbuseIpDB.data?.abuseConfidenceScore;
     
         if (foundIn.length === 0 || confidenceLevel === null || confidenceLevel === undefined) {
             await client.sendMessage(
@@ -138,7 +140,7 @@ async function sendAlertMessage(client, groups, alert) {
 
 // Handle alert escalation
 async function handleAlertEscalation(client, groups, alert) {
-    if (await isInteresting(alert)) {
+    if (await isInteresting(alert) || alert.level >= 5) {
         logger.info("🚨 Interesting alert detected! Escalating...");
         await sendAlertMessage(client, groups, alert);
     }

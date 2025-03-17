@@ -1,43 +1,54 @@
 const logger = require("../helpers/logger");
-const { getRunningDockerContainers, getExitedDockerContainers } = require("../models/containerMonitor");
+const { dockerMonitor } = require("../models/containerMonitor");
 
 async function handleContainerStatus(client, message, args) {
-    const commandOption = args.join(" ").toLowerCase();
-    
+    const commandOption = args.join(" ");
     try {
         const chat = await client.getChatById(message.from);
         await chat.sendSeen();
         await chat.sendStateTyping();
-
-        let containers = [];
-        let containerType = "";
-
-        if (commandOption === "active") {
-            containers = await getRunningDockerContainers();
-            containerType = "Active";
-        } else if (commandOption === "exited") {
-            containers = await getExitedDockerContainers();
-            containerType = "Exited";
+        
+        if (commandOption.toLowerCase() === "active") {
+            const containerRunningStatus =
+                await dockerMonitor.getRunningDockerContainers();
+            if (containerRunningStatus.length === 0) {
+                logger.info("No active Docker containers found");
+                message.reply("No active Docker containers found");
+            } else {
+                const formattedRunningStatusOutput = containerRunningStatus
+                    .map(
+                        (container) =>
+                            `🔖 *Name*: ${container.NAMES}\n🪅 *Status*: ${container.STATUS}\n⏰ *Created*: ${container.CREATED}`
+                    )
+                    .join("\n\n");
+                message.reply(
+                    `Active Containers\n\n` + formattedRunningStatusOutput
+                );
+            }
+            return;
+        } else if (commandOption.toLowerCase() === "exited") {
+            const containerExitedStatus =
+                await dockerMonitor.getExitedDockerContainers();
+            if (containerExitedStatus.length === 0) {
+                logger.info("No exited Docker containers found");
+                message.reply("No exited Docker containers found");
+            } else {
+                const formattedExitedStatusOutput = containerExitedStatus
+                    .map(
+                        (container) =>
+                            `🔖 *Name*: ${container.NAMES}\n🪅 *Status*: ${container.STATUS}\n⏰ *Created*: ${container.CREATED}`
+                    )
+                    .join("\n\n");
+                message.reply(
+                    `Exited Containers\n\n` + formattedExitedStatusOutput
+                );
+            }
+            return;
         } else {
             message.reply(
-                "Please provide a valid argument:\n\n" +
-                "`!container active` - Get active containers\n" +
-                "`!container exited` - Get exited containers"
+                "Please provide argument text.\n\n`!container active` - Get active containers \n`!container exited` - Get exited containers"
             );
             return;
-        }
-
-        if (containers.length === 0) {
-            logger.info(`No ${containerType} Docker containers found`);
-            message.reply(`No ${containerType} Docker containers found`);
-        } else {
-            const formattedStatusOutput = containers
-                .map(container => 
-                    `🔖 *Name*: ${container.Names[0]}\n🪅 *Status*: ${container.Status}\n⏰ *Created*: ${new Date(container.Created * 1000).toLocaleString()}`
-                )
-                .join("\n\n");
-
-            message.reply(`${containerType} Containers\n\n${formattedStatusOutput}`);
         }
     } catch (error) {
         logger.error("Error getting container status:", error);
