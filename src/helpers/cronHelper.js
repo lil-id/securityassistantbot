@@ -2,13 +2,8 @@ const cron = require("node-cron");
 const logger = require("../helpers/logger");
 const { exec } = require("child_process");
 
-function formatLogData(...data) {
-    return data.map(value => value === null ? '*' : value).join(' ');
-}
-
 function startCronJob(schedule, client, groups) {
-    const formattedSchedule = formatLogData(schedule);
-    const newSchedule = validateCronSchedule(formattedSchedule);
+    const newSchedule = validateCronSchedule(schedule);
 
     if (!newSchedule) {
         throw new Error("Invalid cron schedule");
@@ -61,17 +56,17 @@ function startCronJob(schedule, client, groups) {
 }
 
 function validateCronSchedule(schedule) {
-    // Split schedule into parts
-    let parts = schedule.trim().split(/\s+/);
+    // Split schedule into parts and replace "null" with "*"
+    let parts = schedule.trim().split(/\s+/).map(part => part === "null" ? "*" : part);
 
-    // If less than 5 parts, append asterisks to make it valid
+    // Ensure it has exactly 5 parts
     while (parts.length < 5) {
         parts.push("*");
     }
 
     // Join and validate
     const fixedSchedule = parts.join(" ");
-    return cron.validate(fixedSchedule);
+    return cron.validate(fixedSchedule) ? fixedSchedule : false;
 }
 
 module.exports = { startCronJob, validateCronSchedule };
