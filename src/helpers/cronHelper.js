@@ -10,7 +10,7 @@ function startCronJob(schedule, client, groups) {
     }
 
     // Split schedule into parts
-    let parts = schedule.trim().split(/\s+/);
+    let parts = schedule.trim().split(/\s+/).map(part => part === "null" ? "*" : part);
 
     // If less than 5 parts, append asterisks to make it valid
     while (parts.length < 5) {

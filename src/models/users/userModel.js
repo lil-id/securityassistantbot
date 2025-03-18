@@ -7,6 +7,17 @@ class botUsers {
             logger.error("addUsers() received empty users array or undefined");
             return [];
         }
+
+        const isRoleDouble = await this.checkUserAtAdmins(users);
+
+        if (isRoleDouble.length !== 0) {
+            await prisma.admins.deleteMany({
+                where: {
+                    numberPhone: { in: users.map(user => user.id._serialized) }
+                }
+            });
+            logger.info("Successfully switch to user role.");
+        }
     
         const userData = users.map(user => ({
             name: user.name,
@@ -25,7 +36,22 @@ class botUsers {
         }
     
         return users.slice(0, result.count).map(user => user.name);
-    }    
+    }
+
+    // Check if users are already in the admin table
+    static async checkUserAtAdmins(users) {
+        const userPhones = users.map(user => user.id._serialized);
+        const usersExistAsAdmins = await prisma.admins.findMany({
+            where: {
+                numberPhone: { in: userPhones }
+            },
+            select: {
+                numberPhone: true
+            }
+        });
+
+        return usersExistAsAdmins.map(user => user.numberPhone);
+    }
 
     static async checkExistingUsers(users) {
         const userPhones = users.map(user => user.id._serialized);

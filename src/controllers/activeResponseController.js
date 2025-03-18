@@ -101,7 +101,7 @@ async function sendAlertMessage(client, groups, alert) {
         `🌐 *Src IP*: ${alert.src_ip}\n` +
         `🏷️ *Groups*: ${alert.groups}\n` +
         `📋 *Full Log*: ${alert.full_log}\n` +
-        `🔗 *Link Detail*: ${process.env.LOG_URL}\n`
+        `🔗 *Link Detail*: ${process.env.LOG_URL}/dashboard?ip=${alert.src_ip}\n`
     );
 
     await client.sendMessage(groups.announcement, "Running Threat Intelligence checks...");
@@ -267,7 +267,7 @@ function setupActiveResponseRoutes(client, groups, io) {
     wazuhRouter.get("/alerts/:ip", allowEitherSession, async (req, res) => {
         logger.info(`Getting alerts for IP: ${req.params.ip}`);
         const key = `alerts:${req.params.ip}`;
-        const alerts = await redisClient.lrange(key, 0, -1);
+        const alerts = await redisClient.lRange(key, 0, -1);
         res.json(alerts.map(JSON.parse));
     });
 
@@ -287,7 +287,7 @@ wazuhRouter.get("/alerts/summary", allowEitherSession, async (req, res) => {
 
         // Run all Redis queries in parallel
         const alertLists = await Promise.all(
-            keys.map((key) => redisClient.lrange(key, 0, -1))
+            keys.map((key) => redisClient.lRange(key, 0, -1))
         );
 
         // Flatten the results and parse JSON
