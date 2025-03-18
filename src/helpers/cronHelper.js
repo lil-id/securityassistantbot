@@ -2,8 +2,13 @@ const cron = require("node-cron");
 const logger = require("../helpers/logger");
 const { exec } = require("child_process");
 
+function formatLogData(...data) {
+    return data.map(value => value === null ? '*' : value).join(' ');
+}
+
 function startCronJob(schedule, client, groups) {
-    const newSchedule = validateCronSchedule(schedule);
+    const formattedSchedule = formatLogData(schedule);
+    const newSchedule = validateCronSchedule(formattedSchedule);
 
     if (!newSchedule) {
         throw new Error("Invalid cron schedule");
