@@ -12,8 +12,8 @@ jest.mock('../src/helpers/databaseConnection', () => ({
     prisma: {
         users: { findUnique: jest.fn(), create: jest.fn() },
         admins: { findUnique: jest.fn(), create: jest.fn() },
-        jWTAccessTokenUsers: { delete: jest.fn(), create: jest.fn() },
-        jWTAccessTokenAdmins: { delete: jest.fn(), create: jest.fn() },
+        jWTAccessTokenUsers: { delete: jest.fn(), create: jest.fn(), update: jest.fn() },
+        jWTAccessTokenAdmins: { delete: jest.fn(), create: jest.fn(), update: jest.fn() },
     },
 }));
 

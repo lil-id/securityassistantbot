@@ -52,7 +52,7 @@ async function getMemoryUsage() {
         
         const total = parseInt(totalMem);
         const used = parseInt(usedMem);
-        const percentUsed = (used / total * 100).toFixed(1);
+        const percentUsed = parseFloat((used / total * 100).toFixed(1)); 
         const alertLevel = alertChecker.getAlertLevel(percentUsed, THRESHOLDS.memory);
 
         // Get human readable values
@@ -106,39 +106,42 @@ async function getStorageUsage() {
 
 // Function to get all system stats with alerts
 async function getSystemStats() {
-    logger.info('Getting system stats');
     try {
+        logger.info("Getting system stats");
+        
+        // Get all stats in parallel
         const [cpu, memory, storage] = await Promise.all([
             getCPUUsage(),
             getMemoryUsage(),
             getStorageUsage()
         ]);
 
-        // Check if any alerts need to be sent
-        const alerts = [];
-        if (cpu.alert === 'critical' || cpu.alert === 'warning') {
-            alerts.push(cpu.formattedString);
-        }
-        if (memory.alert === 'critical' || memory.alert === 'warning') {
-            alerts.push(memory.formattedString);
-        }
-        if (storage.alert === 'critical' || storage.alert === 'warning') {
-            alerts.push(storage.formattedString);
+        // Check if any errors occurred
+        if (cpu.alert === 'error' || memory.alert === 'error' || storage.alert === 'error') {
+            throw new Error("Failed to get system stats");
         }
 
+        const stats = {
+            cpu: cpu.formattedString,
+            memory: memory.formattedString,
+            storage: storage.formattedString
+        };
+
+        // Collect alerts
+        const alerts = [];
+        if (cpu.alert !== 'normal') alerts.push(cpu.formattedString);
+        if (memory.alert !== 'normal') alerts.push(memory.formattedString);
+        if (storage.alert !== 'normal') alerts.push(storage.formattedString);
+
         return {
-            stats: {
-                cpu: cpu.formattedString,
-                memory: memory.formattedString,
-                storage: storage.formattedString
-            },
-            alerts: alerts,
+            stats,
+            alerts,
             hasAlerts: alerts.length > 0
         };
     } catch (error) {
-        logger.error('Error getting system stats:', error);
+        logger.error("Error getting system stats:", error);
         return {
-            stats: 'Error reading system statistics',
+            stats: "Error reading system statistics",
             alerts: [],
             hasAlerts: false
         };
