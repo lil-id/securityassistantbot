@@ -3,72 +3,114 @@ const logger = require("../helpers/logger");
 
 class dockerMonitor {
     // Parse Docker PS Output Function
-    static async parseDockerPsOutput(stdout) {
-        logger.info('Parsing docker ps output');
-        if (!stdout || stdout.trim() === '') {
-            logger.info('No output from docker ps command');
-            return [];
-        }
+    // static async parseDockerPsOutput(stdout) {
+    //     logger.info('Parsing docker ps output');
+    //     if (!stdout || stdout.trim() === '') {
+    //         logger.info('No output from docker ps command');
+    //         return [];
+    //     }
 
-        const lines = stdout.trim().split('\n');
+    //     const lines = stdout.trim().split('\n');
         
-        if (lines.length < 2) {
-            logger.info('No containers found (only header line or less)');
+    //     if (lines.length < 2) {
+    //         logger.info('No containers found (only header line or less)');
+    //         return [];
+    //     }
+
+    //     try {
+    //         // First line contains headers
+    //         const headerLine = lines[0];
+            
+    //         // Find the starting index of each header based on their position in the header line
+    //         const headerPositions = [];
+    //         const headers = [];
+    //         let headerPattern = /\s{2,}/g;
+    //         let lastIndex = 0;
+            
+    //         // Split headers and get their positions
+    //         headerLine.split(headerPattern).forEach(header => {
+    //             const position = headerLine.indexOf(header, lastIndex);
+    //             if (position !== -1) {
+    //                 headerPositions.push(position);
+    //                 headers.push(header.trim());
+    //                 lastIndex = position + header.length;
+    //             }
+    //         });
+            
+    //         // Process each line using the header positions
+    //         const data = lines.slice(1).map(line => {
+    //             let container = {};
+                
+    //             // Use header positions to slice the line correctly
+    //             for (let i = 0; i < headers.length; i++) {
+    //                 const start = headerPositions[i];
+    //                 const end = headerPositions[i + 1] || line.length;
+    //                 const value = line.substring(start, end).trim();
+    //                 container[headers[i]] = value;
+    //             }
+    //             return container;
+    //         });
+
+    //         // Filter to only include desired headers if needed
+    //         const desiredHeaders = ['NAMES', 'STATUS', 'CREATED'];
+    //         const filteredData = data.map(container => {
+    //             const filteredContainer = {};
+    //             desiredHeaders.forEach(header => {
+    //                 if (container.hasOwnProperty(header)) {
+    //                     filteredContainer[header] = container[header];
+    //                 }
+    //             });
+    //             return filteredContainer;
+    //         });
+
+    //         return filteredData;
+    //     } catch (error) {
+    //         logger.error('Error parsing docker ps output:', error);
+    //         throw error;
+    //     }
+    // }
+
+    static async parseDockerPsOutput(stdout) {
+        logger.info("Parsing docker ps output");
+    
+        if (!stdout || stdout.trim() === "") {
+            logger.info("No output from docker ps command");
             return [];
         }
-
+    
+        const lines = stdout.trim().split("\n");
+    
+        if (lines.length < 2) {
+            logger.info("No containers found (only header line or less)");
+            return [];
+        }
+    
         try {
-            // First line contains headers
-            const headerLine = lines[0];
-            
-            // Find the starting index of each header based on their position in the header line
-            const headerPositions = [];
-            const headers = [];
-            let headerPattern = /\s{2,}/g;
-            let lastIndex = 0;
-            
-            // Split headers and get their positions
-            headerLine.split(headerPattern).forEach(header => {
-                const position = headerLine.indexOf(header, lastIndex);
-                if (position !== -1) {
-                    headerPositions.push(position);
-                    headers.push(header.trim());
-                    lastIndex = position + header.length;
-                }
-            });
-            
-            // Process each line using the header positions
-            const data = lines.slice(1).map(line => {
+            // Extract headers and format them
+            const headers = lines[0].trim().split(/\s{2,}/); // Split by multiple spaces
+            const data = lines.slice(1).map((line) => {
+                const values = line.trim().split(/\s{2,}/); // Match same column pattern
                 let container = {};
-                
-                // Use header positions to slice the line correctly
-                for (let i = 0; i < headers.length; i++) {
-                    const start = headerPositions[i];
-                    const end = headerPositions[i + 1] || line.length;
-                    const value = line.substring(start, end).trim();
-                    container[headers[i]] = value;
-                }
+    
+                // Map extracted values to headers
+                headers.forEach((header, index) => {
+                    container[header] = values[index] || ""; // Ensure undefined fields are handled
+                });
+    
                 return container;
             });
-
-            // Filter to only include desired headers if needed
-            const desiredHeaders = ['NAMES', 'STATUS', 'CREATED'];
-            const filteredData = data.map(container => {
-                const filteredContainer = {};
-                desiredHeaders.forEach(header => {
-                    if (container.hasOwnProperty(header)) {
-                        filteredContainer[header] = container[header];
-                    }
-                });
-                return filteredContainer;
-            });
-
-            return filteredData;
+    
+            // Extract only required fields
+            return data.map(({ NAMES, STATUS, CREATED }) => ({
+                NAMES,
+                STATUS,
+                CREATED,
+            }));
         } catch (error) {
-            logger.error('Error parsing docker ps output:', error);
+            logger.error("Error parsing docker ps output:", error);
             throw error;
         }
-    }
+    }    
 
     // Get Docker Containers Function
     static async getRunningDockerContainers() {

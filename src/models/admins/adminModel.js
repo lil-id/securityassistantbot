@@ -28,6 +28,7 @@ class botAdmins {
         return addedAdmins;
     }
 
+    // Check if admins are already in the user table
     static async checkAdminAtUsers(admins) {
         const adminPhones = admins.map(user => user.id._serialized);
         const adminsExistAsUsers = await prisma.users.findMany({

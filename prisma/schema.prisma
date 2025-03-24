@@ -20,7 +20,7 @@ model Admins {
   name                 String?
   numberPhone          String                @unique
   createdAt            DateTime              @default(now())
-  AdminActicitylogs    AdminActicitylogs[]
+  AdminActicitylogs    AdminActivitylogs[]
   JWTAccessTokenAdmins JWTAccessTokenAdmins?
   ReportAdmins         ReportAdmins[]
   FeedbackAdmins       FeedbackAdmins[]
@@ -40,7 +40,7 @@ model JWTAccessTokenAdmins {
   @@map("jwtaccesstokenadmins")
 }
 
-model AdminActicitylogs {
+model AdminActivitylogs {
   id        Int      @id @default(autoincrement())
   admin     Admins?  @relation(fields: [idAdmin], references: [id], onDelete: SetNull)
   idAdmin   Int?
@@ -48,7 +48,7 @@ model AdminActicitylogs {
   activity  String?
   createdAt DateTime @default(now())
 
-  @@map("adminacticitylogs")
+  @@map("adminactivitylogs")
 }
 
 model Users {
@@ -59,13 +59,13 @@ model Users {
   createdAt           DateTime             @default(now())
   FeedbackUsers       FeedbackUsers[]
   ReportUsers         ReportUsers[]
-  UserActicitylogs    UserActicitylogs[]
+  UserActicitylogs    UserActivitylogs[]
   JWTAccessTokenUsers JWTAccessTokenUsers?
 
   @@map("users")
 }
 
-model UserActicitylogs {
+model UserActivitylogs {
   id        Int      @id @default(autoincrement())
   user      Users?   @relation(fields: [idUser], references: [id], onDelete: SetNull)
   idUser    Int?
@@ -73,7 +73,7 @@ model UserActicitylogs {
   activity  String?
   createdAt DateTime @default(now())
 
-  @@map("useracticitylogs")
+  @@map("useractivitylogs")
 }
 
 model JWTAccessTokenUsers {

@@ -19,9 +19,11 @@ const logger = createLogger({
     ),
     transports: [
         new transports.Console(),
-        new transports.File({ filename: 'src/logs/error.log', level: 'error' }),
-        new transports.File({ filename: 'src/logs/combined.log' })
-    ]
+        process.env.NODE_ENV !== "test" &&
+            new transports.File({ filename: "src/logs/error.log", level: "error" }),
+        process.env.NODE_ENV !== "test" &&
+            new transports.File({ filename: "src/logs/combined.log" })
+    ].filter(Boolean),
 });
 
 module.exports = logger;

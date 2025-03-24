@@ -26,7 +26,7 @@ async function abuseIpDBCheck(ip, retries = 3) {
         const confidenceScore = response.data.data.abuseConfidenceScore;
         return {
             isMalicious: confidenceScore >= 50,
-            data: response.data.data
+            data: response.data.data,
         };
     } catch (error) {
         if (error.code === "ETIMEDOUT" && retries > 0) {
@@ -74,7 +74,7 @@ async function isInteresting(alert) {
         // Always check if the source IP is malicious
         const [abuseIpDBResult, threatFoxResult] = await Promise.all([
             abuseIpDBCheck(alert.src_ip),
-            threatFoxCheck(alert.src_ip)
+            threatFoxCheck(alert.src_ip),
         ]);
 
         // Check if any source considers the IP malicious
@@ -94,17 +94,20 @@ async function sendAlertMessage(client, groups, alert) {
     await client.sendMessage(
         groups.announcement,
         `🪪 *ID*: ${alert.id}\n` +
-        `🖥️ *Agent*: ${alert.agent}\n` +
-        `📝 *Description*: ${alert.description}\n` +
-        `🔔 *Rule Level*: ${alert.level}\n` +
-        `🕒 *Timestamp*: ${alert.timestamp}\n` +
-        `🌐 *Src IP*: ${alert.src_ip}\n` +
-        `🏷️ *Groups*: ${alert.groups}\n` +
-        `📋 *Full Log*: ${alert.full_log}\n` +
-        `🔗 *Link Detail*: ${process.env.LOG_URL}/dashboard?ip=${alert.src_ip}\n`
+            `🖥️ *Agent*: ${alert.agent}\n` +
+            `📝 *Description*: ${alert.description}\n` +
+            `🔔 *Rule Level*: ${alert.level}\n` +
+            `🕒 *Timestamp*: ${alert.timestamp}\n` +
+            `🌐 *Src IP*: ${alert.src_ip}\n` +
+            `🏷️ *Groups*: ${alert.groups}\n` +
+            `📋 *Full Log*: ${alert.full_log}\n` +
+            `🔗 *Link Detail*: ${process.env.LOG_URL}/dashboard?ip=${alert.src_ip}\n`
     );
 
-    await client.sendMessage(groups.announcement, "Running Threat Intelligence checks...");
+    await client.sendMessage(
+        groups.announcement,
+        "Running Threat Intelligence checks..."
+    );
 
     const getThreatFox = await threatFoxCheck(alert.src_ip);
     const getAbuseIpDB = await abuseIpDBCheck(alert.src_ip);
@@ -112,35 +115,41 @@ async function sendAlertMessage(client, groups, alert) {
     if (getThreatFox || getAbuseIpDB) {
         const foundIn = [
             getThreatFox && "ThreatFox",
-            getAbuseIpDB.data && "AbuseIP DB"
+            getAbuseIpDB.data && "AbuseIP DB",
         ].filter(Boolean);
 
-        const confidenceLevel = getThreatFox?.confidence_level ?? getAbuseIpDB.data?.abuseConfidenceScore;
-    
-        if (foundIn.length === 0 || confidenceLevel === null || confidenceLevel === undefined) {
+        const confidenceLevel =
+            getThreatFox?.confidence_level ??
+            getAbuseIpDB.data?.abuseConfidenceScore;
+
+        if (
+            foundIn.length === 0 ||
+            confidenceLevel === null ||
+            confidenceLevel === undefined
+        ) {
             await client.sendMessage(
                 groups.announcement,
                 `No Threat Intelligence Data Found!\n` +
-                `🌐 *IP:* ${alert.src_ip}\n` +
-                `⚠️ This IP is not found in AbuseIP DB or ThreatFox.`
+                    `🌐 *IP:* ${alert.src_ip}\n` +
+                    `⚠️ This IP is not found in AbuseIP DB or ThreatFox.`
             );
         } else {
             await client.sendMessage(
                 groups.announcement,
                 `Threat Intelligence Alert!\n` +
-                `🌐 *Malicious IP:* ${alert.src_ip}\n` +
-                `🕵️‍♂️ *Found at:* ${foundIn.join(", ")}\n` +
-                `🎯 *Confidence Level:* ${confidenceLevel}`
+                    `🌐 *Malicious IP:* ${alert.src_ip}\n` +
+                    `🕵️‍♂️ *Found at:* ${foundIn.join(", ")}\n` +
+                    `🎯 *Confidence Level:* ${confidenceLevel}`
             );
         }
     } else {
         logger.info("No ThreatFox or Abuse IP DB data found for this IP.");
-    }    
+    }
 }
 
 // Handle alert escalation
 async function handleAlertEscalation(client, groups, alert) {
-    if (await isInteresting(alert) || alert.level >= 5) {
+    if ((await isInteresting(alert)) || alert.level >= 5) {
         logger.info("🚨 Interesting alert detected! Escalating...");
         await sendAlertMessage(client, groups, alert);
     }
@@ -159,7 +168,7 @@ async function triggerActiveReponseNotification(client, groups, alert, count) {
         );
 
         // const isTrigger = await triggerActiveReponse(alert.id, alert.src_ip);
-        
+
         // if (isTrigger) {
         //     logger.info(
         //         `🔥 Active response triggered for ${alert.src_ip}.`
@@ -180,12 +189,12 @@ async function processRule5402Alert(client, groups, alert) {
     await client.sendMessage(
         groups.member,
         `🪪 *ID*: ${alert.id}\n` +
-        `🖥️ *Agent*: ${alert.agent}\n` +
-        `🔔 *Rule Level*: ${alert.level}\n` +
-        `👤 *Account*: ${alert.account}\n` +
-        `📝 *Description*: ${alert.description}\n` +
-        `🏷️ *Groups*: ${alert.groups}\n` +
-        `📋 *Full Log*: ${alert.full_log}\n`
+            `🖥️ *Agent*: ${alert.agent}\n` +
+            `🔔 *Rule Level*: ${alert.level}\n` +
+            `👤 *Account*: ${alert.account}\n` +
+            `📝 *Description*: ${alert.description}\n` +
+            `🏷️ *Groups*: ${alert.groups}\n` +
+            `📋 *Full Log*: ${alert.full_log}\n`
     );
 }
 
@@ -203,12 +212,19 @@ async function processAlert(alert, client, groups) {
         if (count === 1) {
             await handleAlertEscalation(client, groups, alert);
         } else if (count % 5 === 0) {
-            await triggerActiveReponseNotification(client, groups, alert, count);
+            await triggerActiveReponseNotification(
+                client,
+                groups,
+                alert,
+                count
+            );
         }
     } else if (alert.rule === "5402" && alert.level === 3) {
         await processRule5402Alert(client, groups, alert);
     } else {
-        logger.info(`Ignoring alert (level ${alert.level}) from ${alert.src_ip}.`);
+        logger.info(
+            `Ignoring alert (level ${alert.level}) from ${alert.src_ip}.`
+        );
     }
 }
 
@@ -237,13 +253,15 @@ function setupActiveResponseRoutes(client, groups, io) {
                 id: alert.agent.id,
                 agent: alert.agent.name,
                 rule: alert.rule.id,
-                account: alert.data && alert.data.dstuser ? alert.data.dstuser : "",
+                account:
+                    alert.data && alert.data.dstuser ? alert.data.dstuser : "",
                 description: alert.rule.description,
                 level: alert.rule.level,
                 timestamp: alert.timestamp,
-                src_ip: alert.data && alert.data.srcip
-                    ? alert.data.srcip
-                    : alert.rule.description,
+                src_ip:
+                    alert.data && alert.data.srcip
+                        ? alert.data.srcip
+                        : alert.rule.description,
                 groups: alert.rule.groups,
                 full_log: alert.full_log,
             };
@@ -251,7 +269,10 @@ function setupActiveResponseRoutes(client, groups, io) {
             // Emit alert to WebSocket clients
             io.emit("alert", alert);
 
-            if ((alert.rule.id === "5402" || alert.rule.level >= 3) && !alert.rule.id.startsWith("2350")) {
+            if (
+                (alert.rule.id === "5402" || alert.rule.level >= 3) &&
+                !alert.rule.id.startsWith("2350")
+            ) {
                 processAlert(reformatAlert, client, groups);
                 res.status(200).json({ status: "Alert received successfully" });
             } else {
@@ -283,8 +304,8 @@ function setupActiveResponseRoutes(client, groups, io) {
 wazuhRouter.get("/alerts/summary", allowEitherSession, async (req, res) => {
     try {
         logger.info("Fetching all alerts...");
-        const keys = await redisClient.keys("alerts:*");
-
+        const keys = (await redisClient.keys("alerts:*")) || [];
+        
         // Run all Redis queries in parallel
         const alertLists = await Promise.all(
             keys.map((key) => redisClient.lRange(key, 0, -1))
@@ -310,7 +331,7 @@ async function handleActiveResponseSummary(client, message, args) {
         await chat.sendStateTyping();
 
         logger.info("Summary of alerts...");
-        const keys = await redisClient.keys("alerts:*");
+        const keys = (await redisClient.keys("alerts:*")) || [];
         if (keys.length > 0) {
             const alerts = [];
             for (const key of keys) {
@@ -349,7 +370,7 @@ async function handleActiveResponseSummary(client, message, args) {
 
             await message.reply(summaryMessage);
         } else {
-            await message.reply("No alerts available");
+            await message.reply("No alerts available.");
         }
     } catch (error) {
         logger.error("Error getting active response:", error);
@@ -364,21 +385,28 @@ async function loginToWazuh() {
             {},
             {
                 headers: {
-                    "Authorization": "Basic " + Buffer.from(`${process.env.WAZUH_API_USER}:${process.env.WAZUH_API_PASS}`).toString("base64"),
-                    "Content-Type": "application/json"
+                    Authorization:
+                        "Basic " +
+                        Buffer.from(
+                            `${process.env.WAZUH_API_USER}:${process.env.WAZUH_API_PASS}`
+                        ).toString("base64"),
+                    "Content-Type": "application/json",
                 },
                 httpsAgent: new https.Agent({
-                    rejectUnauthorized: false // Ignore self-signed SSL issues
-                })
+                    rejectUnauthorized: false, // Ignore self-signed SSL issues
+                }),
             }
         );
 
         return response.data.data.token;
     } catch (error) {
-        logger.error("Error getting JWT token:", error.response?.data || error.message);
+        logger.error(
+            "Error getting JWT token:",
+            error.response?.data || error.message
+        );
         return null;
     }
-};
+}
 
 // Trigger active response to block IP
 async function triggerActiveReponse(idAgent, ipAddress) {
@@ -389,8 +417,8 @@ async function triggerActiveReponse(idAgent, ipAddress) {
         const response = await axios.put(
             `${process.env.WAZUH_API_URL}/active-response?agents_list=${idAgent}&pretty=true`,
             {
-                "command": "!firewalld-drop",
-                "arguments": [`${ipAddress}`],
+                command: "!firewalld-drop",
+                arguments: [`${ipAddress}`],
             },
             {
                 headers: {
@@ -409,8 +437,15 @@ async function triggerActiveReponse(idAgent, ipAddress) {
         return false;
     } catch (error) {
         logger.error("Error triggering active response:", error);
-
     }
 }
 
-module.exports = { handleActiveResponseSummary, triggerActiveReponse, setupActiveResponseRoutes };
+module.exports = {
+    handleActiveResponseSummary,
+    abuseIpDBCheck,
+    threatFoxCheck,
+    isInteresting,
+    sendAlertMessage,
+    processAlert,
+    trackAlert
+};

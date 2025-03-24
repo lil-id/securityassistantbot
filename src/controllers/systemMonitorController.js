@@ -30,7 +30,6 @@ async function handleServerStatus(client, message, args) {
     }
 }
 
-
 async function handleMonitorCommand(client, message, args) {
     if (!args.length) {
         await message.reply(
@@ -57,7 +56,13 @@ async function handleMonitorCommand(client, message, args) {
     } else if (action === "stop") {
         stopMonitoring();
         await message.reply("Monitoring stopped");
-    }
+    } else {
+        await message.reply(
+            "Usage:\n" +
+                "!monitor start [interval] - Start monitoring (interval in minutes, default 5)\n" +
+                "!monitor stop - Stop monitoring"
+        );
+    }    
 }
 
 async function handleThresholdCommand(client, message, args) {

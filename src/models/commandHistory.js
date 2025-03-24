@@ -5,7 +5,7 @@ const { ollamaModel } = require("./ai/ollamaModel");
 class commandHistory {
     static async getCommandAdminHistory() {
         logger.info("Getting admin history command");
-        const historyCommandAdmin = await prisma.adminActicitylogs.findMany({
+        const historyCommandAdmin = await prisma.adminActivitylogs.findMany({
             select: {
                 id: true,
                 name: true,
@@ -19,7 +19,7 @@ class commandHistory {
 
     static async getCommandUserHistory() {
         logger.info("Getting user history command");
-        const historyCommandUser = await prisma.userActicitylogs.findMany({
+        const historyCommandUser = await prisma.userActivitylogs.findMany({
             select: {
                 id: true,
                 name: true,
@@ -45,7 +45,7 @@ Instructions:
 
         if (userType === "admin") {
             logger.info("Analyzing admin command history...");
-            const fetchAdminHistory = await prisma.adminActicitylogs.findMany({
+            const fetchAdminHistory = await prisma.adminActivitylogs.findMany({
                 select: {
                     id: true,
                     name: true,
@@ -66,7 +66,7 @@ Instructions:
             message.reply(response);
         } else if (userType === "user") {
             logger.info("Analyzing user command history...");
-            const fetchUserHistory = await prisma.userActicitylogs.findMany({
+            const fetchUserHistory = await prisma.userActivitylogs.findMany({
                 select: {
                     id: true,
                     name: true,
