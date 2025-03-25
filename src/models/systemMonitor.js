@@ -178,7 +178,6 @@ function stopMonitoring() {
     }
 }
 
-// Export functions
 module.exports = {
     getCPUUsage,
     getMemoryUsage,
