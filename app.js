@@ -15,7 +15,6 @@ const {
     checkDatabaseConnection,
 } = require("./src/helpers/databaseConnection");
 const { adminCommands, userCommands } = require("./src/models/commandModel");
-const { Server } = require("socket.io");
 const { startAccountCheck } = require("./src/controllers/accountMonitorController");
 const { startCronJob } = require("./src/helpers/cronHelper");
 
@@ -27,12 +26,6 @@ checkDatabaseConnection();
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"],
-    },
-});
 
 const PORT = process.env.PORT || 3000;
 
@@ -196,15 +189,7 @@ client.on("ready", async () => {
 // Initialize the client
 client.initialize();
 
-routes(app, client, groups, io);
-
-// WebSocket connection
-io.on("connection", (socket) => {
-    logger.info("user connected");
-    socket.on("disconnect", () => {
-        logger.info("user disconnected");
-    });
-});
+routes(app, client, groups);
 
 // Error handling
 app.use((err, req, res, next) => {

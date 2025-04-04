@@ -245,7 +245,7 @@ const allowEitherSession = (req, res, next) => {
 };
 
 // Wazuh webhook receiver
-function setupActiveResponseRoutes(client, groups, io) {
+function setupActiveResponseRoutes(client, groups) {
     wazuhRouter.post("/alerts", apiKeyMiddleware, async (req, res) => {
         try {
             const alert = req.body;
@@ -265,9 +265,6 @@ function setupActiveResponseRoutes(client, groups, io) {
                 groups: alert.rule.groups,
                 full_log: alert.full_log,
             };
-
-            // Emit alert to WebSocket clients
-            io.emit("alert", alert);
 
             if (
                 (alert.rule.id === "5402" || alert.rule.level >= 3) &&

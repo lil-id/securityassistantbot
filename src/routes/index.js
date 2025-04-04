@@ -3,9 +3,9 @@ const { setWazuhWebhookRoutes } = require('./wazuh');
 const { setOllamaRoutes } = require('./ollama');
 const { setAuthRoutes } = require('./auth');
 
-const routes = (app, client, groups, io) => {
+const routes = (app, client, groups) => {
     const v1 = Router();
-    setWazuhWebhookRoutes(v1, client, groups, io);
+    setWazuhWebhookRoutes(v1, client, groups);
     setOllamaRoutes(v1);
     setAuthRoutes(v1);
 
