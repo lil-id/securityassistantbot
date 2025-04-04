@@ -159,7 +159,7 @@ client.on("ready", async () => {
         // Handle based on role
         if (getRole && getRole.role === "admin") {
             const adminHandler = adminCommands[command];
-            await prisma.adminActicitylogs.create({
+            await prisma.adminActivitylogs.create({
                 data: {
                     idAdmin: getRole.id,
                     name: getRole.name,
@@ -170,11 +170,25 @@ client.on("ready", async () => {
             if (adminHandler) {
                 await adminHandler(client, message, args, groups);
             }
-        } else {
+        } else if (getRole && getRole.role === "user") {
             const userHandler = userCommands[command];
+            await prisma.userActivitylogs.create({
+                data: {
+                    idUser: getRole.id,
+                    name: getRole.name,
+                    activity: content,
+                },
+            });
+            
             if (userHandler) {
                 await userHandler(client, message, args, groups);
             }
+        } else {
+            logger.info("User not found in the database.");
+            await client.sendMessage(
+                message.from,
+                "You are not registered. Please contact an admin to register."
+            );
         }
     });
 });

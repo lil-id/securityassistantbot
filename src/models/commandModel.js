@@ -18,8 +18,8 @@ const { getMalwareList } = require('../controllers/handleMalwareList');
 
 const adminCommands = {
     "!admin": handleAddAdminCommand,
-    "!ask": handleAddAICommand,
     "!user": handleAddUserCommand,
+    "!ask": handleAddAICommand,
     "!server": handleServerStatus,
     // "!monitor": handleMonitorCommand,
     // "!threshold": handleThresholdCommand,

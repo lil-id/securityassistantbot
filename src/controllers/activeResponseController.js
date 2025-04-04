@@ -441,6 +441,7 @@ async function triggerActiveReponse(idAgent, ipAddress) {
 }
 
 module.exports = {
+    setupActiveResponseRoutes,
     handleActiveResponseSummary,
     abuseIpDBCheck,
     threatFoxCheck,

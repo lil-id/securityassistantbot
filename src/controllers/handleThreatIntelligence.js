@@ -63,6 +63,9 @@ async function fetchLatestThreats(client, message, args) {
                         )
                         .join("\n")
             );
+            await message.reply(
+                "For more details on a specific IoC, use `!hunt <IoC>`- Get specific IoC details"
+            );
         } else {
             await message.reply("Failed to fetch ThreatFox data.");
         }

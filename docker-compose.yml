@@ -11,9 +11,9 @@ services:
         tmpfs:
           size: 134217728 # 128Mb
     environment:
-      POSTGRES_USER: botuser
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: example
-      POSTGRES_DB: botdb
+      POSTGRES_DB: whatsappbot
     ports:
       - "5432:5432"
     networks:
@@ -44,23 +44,23 @@ services:
     command: [ "redis-server", "--requirepass", "secretpassword" ]
 
 
-  chatbotapp:
-    build: .
-    container_name: chatbot-app
-    ports:
-      - "3001:3001"
-    volumes:
-      - .:/app
-      - /var/run/docker.sock:/var/run/docker.sock
-    user: "chrome"
-    group_add:
-      - "999"  # This is your host's docker group ID
-    networks:
-      - bot-network
-    restart: always
-    depends_on:
-      - postgres
-      - redis
+  # chatbotapp:
+  #   build: .
+  #   container_name: chatbot-app
+  #   ports:
+  #     - "3001:3001"
+  #   volumes:
+  #     - .:/app
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   user: "chrome"
+  #   group_add:
+  #     - "999"  # This is your host's docker group ID
+  #   networks:
+  #     - bot-network
+  #   restart: always
+  #   depends_on:
+  #     - postgres
+  #     - redis
 
 networks:
   bot-network:
