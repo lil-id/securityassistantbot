@@ -151,7 +151,18 @@ The LLM model used in this project is [Llama 3.1 8B](https://huggingface.co/khol
 
 ## 🤝 Contributing
 
-Contributions are welcome! Before submitting a pull request, please ensure your changes follow the project coding guidelines and all tests pass.
+Contributions are welcome! If you'd like to contribute, please follow these steps:
+
+1. Fork the repository.
+2. Create a new branch:
+`git checkout -b feature-name`
+3. Make your changes and commit them:
+`git commit -m "Add feature-name"`
+4. Push to your branch:
+`git push origin feature-name`
+5. Open a pull request.
+
+Before submitting a pull request, please ensure your changes follow the project coding  and all tests pass.
 
 ## 📜 License
 
