@@ -146,9 +146,23 @@ This will run all tests in the `/test` folder and display test results in the te
 - **❓ Help and Information Commands:**  
   The bot provides detailed help messages (`!help`) and information about its features (`!info`) to assist users and admins in understanding its capabilities.
 
+## 🤖 LLM Model
+The LLM model used in this project is [Llama 3.1 8B](https://huggingface.co/kholil-lil/wazuh-model), which has been fine-tuned using a Wazuh alerts dataset. It is designed to classify Wazuh alerts as either **true positives** or **false positives**. Additionally, you can ask it other security-related questions, just like any other LLM.
+
 ## 🤝 Contributing
 
-Contributions are welcome! Before submitting a pull request, please ensure your changes follow the project coding guidelines and all tests pass.
+Contributions are welcome! If you'd like to contribute, please follow these steps:
+
+1. Fork the repository.
+2. Create a new branch:
+`git checkout -b feature-name`
+3. Make your changes and commit them:
+`git commit -m "Add feature-name"`
+4. Push to your branch:
+`git push origin feature-name`
+5. Open a pull request.
+
+Before submitting a pull request, please ensure your changes follow the project coding  and all tests pass.
 
 ## 📜 License
 
