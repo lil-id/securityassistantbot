@@ -1,6 +1,7 @@
-# 🔒 Boty (Bot Security)
+# ✨ Morning Star (Monsta)
+**Monsta** is your SOC assistant bot built to streamline alert visibility from **Wazuh**. Instead of flooding your security team with repeated notifications, Monsta filters alerts from an **external integrator** and forwards **only the first alert from the same IP** to your WhatsApp group. Subsequent alerts from that IP are **silently logged**, allowing analysts to access the full history via the **dashboard** without overwhelming group notifications.
 
-**Boty** is your SOC partner that helps reduce headaches caused by false positives from SIEM. This project automates various security checks and alerting functions using tools and APIs integrated into the bot.
+Before forwarding, Monsta **enriches each alert** by checking the IP against external threat intelligence sources such as **AbuseIPDB** and **ThreatFox**, helping analysts **prioritize alerts** based on reputation and context. This project automates various security checks and alerting functions using tools and APIs integrated into the bot.
 
 ## 📂 Project Structure
 
@@ -77,23 +78,74 @@
 
   ```env
   TOKEN_CODE=your_secret_code_here
-  LOG_URL=https://logs.yourdomain.com
+  LOG_URL=https://logs.yourdomain.com  
   ```
 
-  See the env.example for full content of .env files
+  LOG_URL is the URL of [securitybotfrontend](https://github.com/lil-id/securitybotfrontend) after you done deployed it.
+
+  See the `env.example` for full content of `.env` files.
 
 - **Database Connection:**  
   The project uses Prisma for database operations. Make sure you set up your database connection in the `databaseConnection.js` helper and update your Prisma schema if needed.
 
-## 🚀 Running the Project
-
+## 🚀 Getting Started
 To start the application:
 
-```bash
-node app.js
-```
+1. Make sure you have done installed Docker.
+2. Run docker compose with `docker compose up -d`.
+3. Execute `npx prisma db push` to make the database schema.
+4. Run `npm run dev` to start the bot.
 
-This will start the bot. The application listens for incoming WhatsApp messages and processes them based on the controllers defined in the `/src/controllers` directory.
+The application listens for incoming WhatsApp messages and processes them based on the controllers defined in the `/src/controllers` directory.
+
+If you want login to database with Adminer, follow these data:
+
+```
+System: PostgreSQL
+Server: postgres
+```
+see another field value at `docker-compose.yml` files.
+
+## 🧭 Kickstart Your WhatsApp Bot
+
+#### 1️⃣ Scan the QR Code
+
+  Open your WhatsApp mobile app and scan the QR code displayed in the terminal.
+
+  If your phone supports dual SIM, it is **recommended** to:
+- Use the **second SIM** for the bot’s WhatsApp number (this number will be default admin).
+- Use the **first SIM** for your main/admin number.
+
+  Wait for the authentication process to complete. You can monitor the status in the terminal logs.
+
+#### 2️⃣ Create a WhatsApp Community
+
+  Create a community with the following group names inside:
+
+- 🔔 **Security Alert** – Receives Wazuh alerts.
+- 👨‍💻 **Security Member** – For security analysts with the `user` role.
+- 🛡️ **Security Admin** – For members managing the bot with the `admin` role.
+- ⚠️ **Alert Trigger** *(optional)* – Tracks how often specific IPs trigger Wazuh rules.
+
+#### 3️⃣ Invite the Bot
+
+  Add the **bot’s number** (second SIM) to each group listed above.
+
+#### 4️⃣ Assign Admin Role
+
+  Switch to the **bot’s WhatsApp account (second SIM)**.
+
+  Send the following command to **Security Admin** group to add your main number as an admin:
+
+  `!admin @your_contact_name`
+
+#### 5️⃣ Try Out Commands
+
+  Switch back to your **main WhatsApp number (first SIM)**.
+
+  See any available commands with:
+  
+  `!help`
 
 ## 🧪 Running Tests
 
