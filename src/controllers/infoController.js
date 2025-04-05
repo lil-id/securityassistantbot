@@ -6,8 +6,8 @@ async function handleInfo(client, message, args) {
         await chat.sendSeen();
         await chat.sendStateTyping();
 
-        logger.info("Bot Security (Boty) v1.0");
-        await message.reply("Bot Security (Boty) v1.0\nCreated by lil-id");
+        logger.info("Morning Star (Monsta) v1.0");
+        await message.reply("Morning Star (Monsta) v1.0\nCreated by lil-id");
     } catch (error) {
         logger.error("Error getting info:", error);
         message.reply(`Error: ${error.message}`);
