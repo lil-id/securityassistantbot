@@ -94,7 +94,11 @@ To start the application:
 1. Make sure you have done installed Docker.
 2. Run docker compose with `docker compose up -d`.
 3. Execute `npx prisma db push` to make the database schema.
-4. Run `npm run dev` to start the bot.
+4. Run `npm run dev` to start the bot. See the port of bot.
+5. Install ngrok and run `ngrok http 3001` to create **temporary** https URL. Good if you have domain, you don't need ngrok anymore.
+6. Use that ngrok URL as `hook_url` at your custom wazuh integrator later. 
+7. Create an Wazuh external integrator, so the bot can receive alert from Wazuh. Check this [wazuh custom integrator](https://github.com/lil-id/wazuh-express).
+8. See the bot log to make sure everything works properly. 
 
 The application listens for incoming WhatsApp messages and processes them based on the controllers defined in the `/src/controllers` directory.
 
