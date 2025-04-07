@@ -76,12 +76,12 @@ async function trackAlert(ip) {
     return count;
 }
 
-// Store alerts in Redis (TTL: 10 minutes)
+// Store alerts in Redis (TTL: 60 minutes)
 async function storeAlert(alert) {
     logger.info("Storing alert in Redis");
     const key = `alerts:${alert.src_ip}`;
     await redisClient.rPush(key, JSON.stringify(alert)); // Push alert to list
-    await redisClient.expire(key, 600); // Set expiration to 10 minutes
+    await redisClient.expire(key, 3600); // Set expiry to 60 minutes 
 }
 
 // Determine if an alert is interesting
