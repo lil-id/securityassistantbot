@@ -11,6 +11,22 @@ require("dotenv").config();
 
 const wazuhRouter = Router();
 
+// Middleware to allow either user or admin session
+const allowEitherSession = (req, res, next) => {
+    adminSession(req, res, (err) => {
+        logger.info("Checking admin session...");
+        if (!err) return next(); // Admin passed, move forward
+
+        logger.info("Admin check failed; trying user session...");
+        userSession(req, res, (err) => {
+            if (!err) return next(); // User passed, move forward
+
+            logger.info("User check failed too.");
+            return res.status(401).json({ error: "Unauthorized access" });
+        });
+    });
+};
+
 // Check if IP is malicious using an external threat intelligence API
 async function abuseIpDBCheck(ip, retries = 3) {
     logger.info(`Checking threat intelligence for IP: ${ip}`);
@@ -133,7 +149,7 @@ async function sendAlertMessage(client, groups, alert) {
                     `🌐 *IP:* ${alert.src_ip}\n` +
                     `⚠️ This IP is not found in AbuseIP DB or ThreatFox.`
             );
-        } else if (confidenceLevel === 0) {
+        } else if (confidenceLevel <= 25) {
             await client.sendMessage(
                 groups.member,
                 `🪪 *ID*: ${alert.id}\n` +
@@ -151,7 +167,8 @@ async function sendAlertMessage(client, groups, alert) {
                 groups.member,
                 `Interesting Alert Detected!\n` +
                     `🌐 *IP:* ${alert.src_ip}\n` +
-                    `⚠️ This IP is not found in AbuseIP DB or ThreatFox.`
+                    `🎯 *Confidence Level:* ${confidenceLevel}\n` +
+                    `⚠️ This Confidence IP is Low (<= 25) or is not found in AbuseIP DB or ThreatFox.`
             );
         } else {
             await client.sendMessage(
@@ -248,22 +265,6 @@ async function processAlert(alert, client, groups) {
     }
 }
 
-// Middleware to allow either user or admin session
-const allowEitherSession = (req, res, next) => {
-    adminSession(req, res, (err) => {
-        logger.info("Checking admin session...");
-        if (!err) return next(); // Admin passed, move forward
-
-        logger.info("Admin check failed; trying user session...");
-        userSession(req, res, (err) => {
-            if (!err) return next(); // User passed, move forward
-
-            logger.info("User check failed too.");
-            return res.status(401).json({ error: "Unauthorized access" });
-        });
-    });
-};
-
 // Wazuh webhook receiver
 function setupActiveResponseRoutes(client, groups) {
     wazuhRouter.post("/alerts", apiKeyMiddleware, async (req, res) => {
@@ -281,7 +282,7 @@ function setupActiveResponseRoutes(client, groups) {
                 src_ip:
                     alert.data && alert.data.srcip
                         ? alert.data.srcip
-                        : alert.rule.description,
+                        : "-",
                 groups: alert.rule.groups,
                 full_log: alert.full_log,
             };
