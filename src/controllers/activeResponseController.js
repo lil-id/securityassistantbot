@@ -149,8 +149,9 @@ async function sendAlertMessage(client, groups, alert) {
 
             await client.sendMessage(
                 groups.member,
-                `🚨 Interesting alert detected!\n` +
-                `⚠️ This IP is not found in AbuseIP DB or ThreatFox.`
+                `Interesting Alert Detected!\n` +
+                    `🌐 *IP:* ${alert.src_ip}\n` +
+                    `⚠️ This IP is not found in AbuseIP DB or ThreatFox.`
             );
         } else {
             await client.sendMessage(
