@@ -133,6 +133,25 @@ async function sendAlertMessage(client, groups, alert) {
                     `🌐 *IP:* ${alert.src_ip}\n` +
                     `⚠️ This IP is not found in AbuseIP DB or ThreatFox.`
             );
+            
+            await client.sendMessage(
+                groups.member,
+                `🪪 *ID*: ${alert.id}\n` +
+                    `🖥️ *Agent*: ${alert.agent}\n` +
+                    `📝 *Description*: ${alert.description}\n` +
+                    `🔔 *Rule Level*: ${alert.level}\n` +
+                    `🕒 *Timestamp*: ${alert.timestamp}\n` +
+                    `🌐 *Src IP*: ${alert.src_ip}\n` +
+                    `🏷️ *Groups*: ${alert.groups}\n` +
+                    `📋 *Full Log*: ${alert.full_log}\n` +
+                    `🔗 *Link Detail*: ${process.env.LOG_URL}/dashboard?ip=${alert.src_ip}\n`
+            );
+
+            await client.sendMessage(
+                groups.member,
+                `🚨 Interesting alert detected!\n` +
+                `⚠️ This IP is not found in AbuseIP DB or ThreatFox.`
+            );
         } else {
             await client.sendMessage(
                 groups.announcement,
