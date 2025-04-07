@@ -133,7 +133,7 @@ async function sendAlertMessage(client, groups, alert) {
                     `🌐 *IP:* ${alert.src_ip}\n` +
                     `⚠️ This IP is not found in AbuseIP DB or ThreatFox.`
             );
-            
+        } else if (confidenceLevel === 0) {
             await client.sendMessage(
                 groups.member,
                 `🪪 *ID*: ${alert.id}\n` +
