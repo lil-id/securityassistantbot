@@ -56,6 +56,27 @@ class botAdmins {
 
         return existingAdmins.map(admin => admin.numberPhone);
     }
+
+    static async deleteAdmins(admins) {
+        if (!admins || admins.length === 0) {
+            logger.error("deleteAdmins() received empty admins array or undefined");
+            return [];
+        }
+
+        const adminPhones = admins.map(admin => admin.id._serialized);
+        const deletedAdmins = await prisma.admins.deleteMany({
+            where: {
+                numberPhone: { in: adminPhones }
+            }
+        });
+
+        if (!deletedAdmins || deletedAdmins.count === 0) {
+            logger.warn("⚠️ No admins were deleted (possible duplicates)");
+            return [];
+        }
+
+        return admins.slice(0, deletedAdmins.count).map(admin => admin.name);
+    }
 }
 
 module.exports = { botAdmins }

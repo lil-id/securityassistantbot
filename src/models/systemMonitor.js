@@ -4,11 +4,11 @@ const { alertChecker } = require('../helpers/alertChecker');
 const execPromise = util.promisify(exec);
 const logger = require('../helpers/logger');
 
-// Alert thresholds
+// Alert thresholds default values
 const THRESHOLDS = {
     cpu: {
         warning: 70,    // 70% CPU usage
-        critical: 90    // 90% CPU usage
+        critical: 90   // 90% CPU usage
     },
     memory: {
         warning: 80,    // 80% Memory usage

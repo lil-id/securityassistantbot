@@ -38,7 +38,8 @@ class botUsers {
         return users.slice(0, result.count).map(user => user.name);
     }
 
-    // Check if users are already in the admin table
+    // We can switch the role of the user to admin by !admin or vice versa !user command
+    // but before we switch the role, we need check if users are already in the admin table or not
     static async checkUserAtAdmins(users) {
         const userPhones = users.map(user => user.id._serialized);
         const usersExistAsAdmins = await prisma.admins.findMany({
@@ -65,6 +66,27 @@ class botUsers {
         });
 
         return existingUsers.map(user => user.numberPhone);
+    }
+
+    static async deleteUsers(users) {
+        if (!users || users.length === 0) {
+            logger.error("deleteUsers() received empty users array or undefined");
+            return [];
+        }
+
+        const userPhones = users.map(user => user.id._serialized);
+        const deletedUsers = await prisma.users.deleteMany({
+            where: {
+                numberPhone: { in: userPhones }
+            }
+        });
+
+        if (!deletedUsers || deletedUsers.count === 0) {
+            logger.warn("⚠️ No users were deleted (possible duplicates)");
+            return [];
+        }
+
+        return users.slice(0, deletedUsers.count).map(user => user.name);
     }
 }
 

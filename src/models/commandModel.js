@@ -6,10 +6,10 @@ const { handleFeedback } = require('../controllers/feedbackController');
 const { handleAddAICommand } = require('../controllers/ai/ollamaController');
 const { handleBotTermination } = require('../controllers/handleBotTermination');
 const { handleContainerStatus } = require('../controllers/containerController');
-const { handleAddUserCommand } = require('../controllers/users/addUserController');
+const { handleAddDeleteUserCommand } = require('../controllers/users/addUserController');
 const { handleActiveResponseSummary } = require('../controllers/activeResponseController');
-const { handleAddAdminCommand } = require('../controllers/admins/addAdminController');
-const { handleAccountCheck, handleAccountMonitorCommand } = require('../controllers/accountMonitorController');
+const { handleAddDeleteAdminCommand } = require('../controllers/admins/addAdminController');
+const { handleAccountCheck } = require('../controllers/accountMonitorController');
 const { handleServerStatus, handleMonitorCommand, handleThresholdCommand } = require('../controllers/systemMonitorController');
 const { handleBotnetCheck } = require('../controllers/handleBotnetCheck');
 const { fetchLatestThreats } = require('../controllers/handleThreatIntelligence');
@@ -17,20 +17,19 @@ const { handleCommandHistory } = require('../controllers/commandHistoryControlle
 const { getMalwareList } = require('../controllers/handleMalwareList');
 
 const adminCommands = {
-    "!admin": handleAddAdminCommand,
-    "!user": handleAddUserCommand,
+    "!admin": handleAddDeleteAdminCommand,
+    "!user": handleAddDeleteUserCommand,
     "!ask": handleAddAICommand,
     "!server": handleServerStatus,
-    // "!monitor": handleMonitorCommand,
-    // "!threshold": handleThresholdCommand,
+    "!monitor": handleMonitorCommand,
+    "!threshold": handleThresholdCommand,
     "!account": handleAccountCheck,
-    // "!accmon": handleAccountMonitorCommand,
     "!container": handleContainerStatus,
     "!snap": handleSnapshot,
     "!hunt": fetchLatestThreats,
     "!malware": getMalwareList,
     "!botnet": handleBotnetCheck,
-    "!response": handleActiveResponseSummary,
+    "!summary": handleActiveResponseSummary,
     "!feedback": handleFeedback,
     "!report": handleReport,
     "!history": handleCommandHistory, 
@@ -42,13 +41,14 @@ const adminCommands = {
 const userCommands = {
     "!ask": handleAddAICommand,
     "!server": handleServerStatus,
+    "!monitor": handleMonitorCommand,
     "!account": handleAccountCheck,
     "!container": handleContainerStatus,
     "!snap": handleSnapshot,
     "!hunt": fetchLatestThreats,
     "!malware": getMalwareList,
     "!botnet": handleBotnetCheck,
-    "!response": handleActiveResponseSummary,
+    "!summary": handleActiveResponseSummary,
     "!feedback": handleFeedback,
     "!report": handleReport,
     "!help": handleHelp,

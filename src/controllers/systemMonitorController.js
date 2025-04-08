@@ -34,47 +34,51 @@ async function handleMonitorCommand(client, message, args) {
     if (!args.length) {
         await message.reply(
             "Usage:\n" +
-                "!monitor start [interval] - Start monitoring (interval in minutes, default 5)\n" +
-                "!monitor stop - Stop monitoring"
+                "`!monitor start <interval>` - Start monitoring (interval in minutes, default *5 minutes*)\n" +
+                "`!monitor stop` - Stop monitoring"
         );
         return;
     }
 
-    const action = args[0].toLowerCase();
+    const parsedArgs = args.join(" ").split(" ");
+    const action = parsedArgs[0].toLowerCase();
+
     if (action === "start") {
-        const interval = args[1] ? parseInt(args[1]) * 60 * 1000 : undefined;
+        const interval = parsedArgs[1] ? parseInt(parsedArgs[1]) * 60 * 1000 : undefined;
         startMonitoring(
             client,
             message.from,
             interval
         );
         await message.reply(
-            `Monitoring started. Interval: ${
-                interval ? interval / 60000 : 5
-            } minutes`
+            `System monitoring started\n\n` +
+            `⏱️ Interval: *${interval ? interval / 60000 : 5} minutes*\n\n` +
+            `🔄 The bot will check every *${interval ? interval / 60000 : 5} minutes*.\n\n` +
+            `⚠️ You will receive alerts if any thresholds are *exceeded*.`
         );
     } else if (action === "stop") {
         stopMonitoring();
-        await message.reply("Monitoring stopped");
+        await message.reply("Monitoring stopped.");
     } else {
         await message.reply(
             "Usage:\n" +
-                "!monitor start [interval] - Start monitoring (interval in minutes, default 5)\n" +
-                "!monitor stop - Stop monitoring"
+                "`!monitor start <interval>` - Start monitoring (interval in minutes, default 5)\n" +
+                "`!monitor stop` - Stop monitoring"
         );
     }    
 }
 
 async function handleThresholdCommand(client, message, args) {
-    if (args.length !== 3) {
+    const parsedArgs = args.join(" ").split(" ");
+    if (parsedArgs.length !== 3) {
         await message.reply(
-            "Usage: !threshold <cpu|memory|storage> <warning|critical> <value>\n" +
-                "Example: !threshold cpu warning 70"
+            "Usage:\n`!threshold <cpu|memory|storage> <warning|critical> <value>`\n\n" +
+            "Example:\n`!threshold cpu warning 70`"
         );
         return;
     }
 
-    const [resource, level, value] = args;
+    const [resource, level, value] = parsedArgs;
     const numValue = parseInt(value);
 
     if (isNaN(numValue) || numValue < 0 || numValue > 100) {
@@ -88,10 +92,10 @@ async function handleThresholdCommand(client, message, args) {
     ) {
         THRESHOLDS[resource][level] = numValue;
         await message.reply(
-            `${resource} ${level} threshold set to ${numValue}%`
+            `${resource} ${level} threshold set to *${numValue}%*`
         );
     } else {
-        await message.reply("Invalid resource or level");
+        await message.reply("Invalid resource or level.");
     }
 }
 
