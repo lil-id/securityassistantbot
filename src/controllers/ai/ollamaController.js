@@ -15,7 +15,7 @@ async function handleAddAICommand(client, message, args) {
             return res.status(503).send("AI server is not running.");
         } catch (error) {
             logger.error("Error in handleAddAICommand:", error);
-            await message.reply("Error in handleAddAICommand");
+            await message.reply("Error in AI server communication.");
         }
     }
 
@@ -24,7 +24,7 @@ async function handleAddAICommand(client, message, args) {
     //         "Please *select security alert* to get security recommendation and type \n!ask"
     //     );
     //     await message.reply(
-    //         "or provide argument text for custom question.\n\nExample: \n\n*!ask why sky is blue?*"
+    //         "or provide argument text for custom question.\n\nExample: \n\n*!ask what is SOC?*"
     //     );
     //     return;
     // }
@@ -34,6 +34,7 @@ async function handleAddAICommand(client, message, args) {
 
     logger.info("Asking AI...");
     logger.info("This may take 3-5 minutes...");
+    await message.reply("Using default prompt...\n\n" + prompt);
     await message.reply("Asking AI...\n\nThis may take 3-5 minutes...");
 
     if (args.length === 0) {

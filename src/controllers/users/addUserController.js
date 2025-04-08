@@ -13,10 +13,12 @@ async function handleAddDeleteUserCommand(client, message, args) {
 
     if (!getMentionsNames || getMentionsNames.length === 0) {
         message.reply("No valid users mentioned.");
+        message.reply("Usage:\n`!user @mention1 @mention2` - To add a new user\n\n" +
+            "`!user remove @mention1 @mention2` - To remove an user");
     }
 
     if (isRemoveCommand) {
-        // Handle remove admin command
+        // Handle remove user command
         const removedUsers = await botUsers.deleteUsers(getMentionsNames);
 
         if (removedUsers.length > 0) {

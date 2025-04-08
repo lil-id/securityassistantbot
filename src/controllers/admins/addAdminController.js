@@ -13,6 +13,8 @@ async function handleAddDeleteAdminCommand(client, message, args) {
 
     if (!getMentionsNames || getMentionsNames.length === 0) {
         message.reply("No valid admins mentioned.");
+        message.reply("Usage:\n`!admin @mention1 @mention2` - To add a new admin\n\n" +
+            "`!admin remove @mention1 @mention2` - To remove an admin");
         return;
     }
 
