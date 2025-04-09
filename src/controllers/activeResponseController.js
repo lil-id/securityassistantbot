@@ -233,6 +233,10 @@ async function processRule5402Alert(client, groups, alert) {
             `🏷️ *Groups*: ${alert.groups}\n` +
             `📋 *Full Log*: ${alert.full_log}\n`
     );
+    await client.sendMessage(
+        groups.member,
+        `Alert detected! *${alert.account}* executed a command as root.`
+    );
 }
 
 // Process incoming alert
