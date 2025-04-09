@@ -1,7 +1,8 @@
 const { prisma } = require('./databaseConnection');
 
 async function checkRoles(sender) {
-    const admin = await prisma.admins.findUnique({
+    // Check in the admins table
+    let adminOrUser = await prisma.admins.findUnique({
         where: {
             numberPhone: sender
         },
@@ -11,7 +12,22 @@ async function checkRoles(sender) {
             role: true
         }
     });
-    return admin;
+
+    // If not found in admins, check in the users table
+    if (!adminOrUser) {
+        adminOrUser = await prisma.users.findUnique({
+            where: {
+                numberPhone: sender
+            },
+            select: {
+                id: true,
+                name: true,
+                role: true
+            }
+        });
+    }
+
+    return adminOrUser;
 }
 
 module.exports = { checkRoles };
