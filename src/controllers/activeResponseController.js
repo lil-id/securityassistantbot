@@ -67,12 +67,12 @@ async function trackAlert(ip) {
     let count = await redisClient.get(key);
 
     if (!count) {
-        await redisClient.setEx(key, 600, "1"); // Set TTL of 10 minutes
+        await redisClient.setEx(key, 3600, "1"); // Set TTL of 10 minutes
         return 1; // First occurrence
     }
 
     count = (parseInt(count) + 1).toString();
-    await redisClient.setEx(key, 600, count); // Reset TTL on update
+    await redisClient.setEx(key, 3600, count); // Reset TTL on update
     return count;
 }
 

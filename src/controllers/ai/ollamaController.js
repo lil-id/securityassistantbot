@@ -29,21 +29,27 @@ async function handleAddAICommand(client, message, args) {
     //     return;
     // }
 
-    let prompt =
-        "Act as a senior SOC analyst. Given the following security alert from Wazuh, analyze the potential threat, determine its severity, and recommend remediation steps. Provide your reasoning based on best SOC practices.\n\n";
+    if (content.length === 0) {
+        let prompt =
+        `"Act as a senior SOC analyst. Given the following security alert from Wazuh, analyze the potential threat, determine its severity, and recommend remediation steps. Provide your reasoning based on best SOC practices."\n\n`;
 
-    logger.info("Asking AI...");
-    logger.info("This may take 3-5 minutes...");
-    await message.reply("Using default prompt...\n\n" + prompt);
-    await message.reply("Asking AI...\n\nThis may take 3-5 minutes...");
+        logger.info("Asking AI...");
+        logger.info("This may take 3-5 minutes...");
 
-    if (args.length === 0) {
+        await message.reply("Using default prompt...\n\n" + prompt);
+        await message.reply("Asking AI...\n\nThis may take 3-5 minutes...");
+
         const quotedMsg = await message._data.quotedMsg.body;
         const selectionChat = prompt + quotedMsg;
         const response = await ollamaModel.sendPrompt(selectionChat);
         await message.reply(response);
         return;
     }
+
+    logger.info("Asking AI...");
+    logger.info("This may take 3-5 minutes...");
+    await message.reply("Asking AI...\n\nThis may take 3-5 minutes...");
+
     const response = await ollamaModel.sendPrompt(content);
     await message.reply(response);
 }
