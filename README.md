@@ -1,5 +1,5 @@
 # ✨ Morning Star (Monsta)
-**Monsta** is your SOC assistant bot built to streamline alert visibility from **Wazuh**. Instead of flooding your security team with repeated notifications, Monsta filters alerts from an **external integrator** and forwards **only the first alert from the same IP** to your WhatsApp group. Subsequent alerts from that IP are **silently logged**, allowing analysts to access the full history via the **dashboard** without overwhelming group notifications.
+**Monsta** is your SOC assistant bot built to streamline alert visibility from **Wazuh**. Instead of flooding your security team with repeated notifications, Monsta filters alerts from an **wazuh external integrator** and forwards **only the first alert from the same IP** to your WhatsApp group. Subsequent alerts from that IP are **silently logged**, allowing analysts to access the full history via the **dashboard** without overwhelming group notifications.
 
 Before forwarding, Monsta **enriches each alert** by checking the IP against external threat intelligence sources such as **AbuseIPDB** and **ThreatFox**, helping analysts **prioritize alerts** based on reputation and context. This project automates various security checks and alerting functions using tools and APIs integrated into the bot.
 
