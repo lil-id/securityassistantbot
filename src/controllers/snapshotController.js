@@ -45,6 +45,21 @@ async function handleSnapshot(client, message, args, groups) {
         // Parse the cron schedule
         const [minute, hour, dayOfMonth, month, dayOfWeek] = newSchedule.split(" ");
 
+        // Format the time in WITA
+        const formattedTime = `*${hour.padStart(2, '0')}:${minute.padStart(2, '0')} WITA*`;
+
+        // Build a dynamic message based on the provided schedule
+        let additionalInfo = '';
+        if (dayOfMonth && dayOfMonth !== '*') additionalInfo += ` on *day ${dayOfMonth}*`;
+        if (month && month !== '*') additionalInfo += ` of *month ${month}*`;
+        if (dayOfWeek && dayOfWeek !== '*') {
+            const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            additionalInfo += ` on *${daysOfWeek[parseInt(dayOfWeek) % 7]}*`;
+        }
+
+        // Combine the formatted time and additional info
+        const dynamicMessage = `📅 Cron schedule successfully updated to:\n\n${formattedTime} (UTC+8)${additionalInfo}`;
+
         // Store the new cron schedule in the database
         await prisma.cronJobsSchedule.upsert({
             where: { id: 1 },
@@ -63,8 +78,8 @@ async function handleSnapshot(client, message, args, groups) {
             },
         });
 
-        logger.info(`Cron schedule successfully updated to: ${newSchedule}`);
-        await message.reply(`Cron schedule successfully updated to: ${newSchedule}`);
+        logger.info(dynamicMessage);
+        await message.reply(dynamicMessage);
     } else {
         await message.reply("📌 *Cron format:*\n`sec min hour day month week`\n🔢 *Value ranges:*\n- ⏳ Second: `0-59`\n- ⏰ Minute: `0-59`\n- 🕛 Hour: `0-23`\n- 📅 Day of Month: `1-31`\n- 🗓️ Month: `1-12` (or names)\n- 📆 Day of Week: `0-7` (or names, 0 & 7 = Sunday)\n\n✅ Example:\n`!snap 59 23 * * *` → Runs at *11:59 PM* daily");
     }

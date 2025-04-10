@@ -9,22 +9,12 @@ function startCronJob(schedule, client, groups) {
         throw new Error("Invalid cron schedule");
     }
 
-    // Split schedule into parts
-    let parts = schedule.trim().split(/\s+/).map(part => part === "null" ? "*" : part);
-
-    // If less than 5 parts, append asterisks to make it valid
-    while (parts.length < 5) {
-        parts.push("*");
-    }
-
-    // Join and validate
-    const fixedSchedule = parts.join(" ");
-
-    const job = cron.schedule(fixedSchedule, () => {
+    console.log(newSchedule);
+    const job = cron.schedule(newSchedule, () => {
         logger.info("Running scheduled system snapshot...");
         client.sendMessage(
             groups.member,
-            "Running scheduled system snapshot..."
+            "⏳ Running scheduled system snapshot..."
         );
 
         exec(
@@ -46,7 +36,7 @@ function startCronJob(schedule, client, groups) {
                 );
                 client.sendMessage(
                     groups.member,
-                    "Scheduled system snapshot completed."
+                    "✅ Scheduled system snapshot completed."
                 );
             }
         );
@@ -64,9 +54,19 @@ function validateCronSchedule(schedule) {
         parts.push("*");
     }
 
-    // Join and validate
     const fixedSchedule = parts.join(" ");
-    return cron.validate(fixedSchedule) ? fixedSchedule : false;
+
+    // Validate the cron schedule
+    if (!cron.validate(fixedSchedule)) {
+        return false;
+    }
+
+    // Convert WITA (UTC+8) to UTC
+    const [minute, hour, day, month, dayOfWeek] = parts;
+    const utcHour = hour === "*" ? "*" : (parseInt(hour) - 8 + 24) % 24; // Adjust hour for UTC
+    const utcSchedule = `${minute} ${utcHour} ${day} ${month} ${dayOfWeek}`;
+
+    return utcSchedule;
 }
 
 module.exports = { startCronJob, validateCronSchedule };

@@ -120,7 +120,7 @@ client.on("ready", async () => {
 
     // Start the initial cron job
     startCronJob(cronSchedule, client, groups);
-    logger.info("Initial cron job started.");
+    logger.info(`Initial cron job started at ${cronSchedule} WITA (UTC+8).`);
 
     // Start the Express server after the WhatsApp client is ready
     server.listen(PORT, () => {
