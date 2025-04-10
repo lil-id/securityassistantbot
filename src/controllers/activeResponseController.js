@@ -382,12 +382,11 @@ async function handleActiveResponseSummary(client, message, args) {
             );
 
             let summaryMessage = "Summary of alerts\n\n";
-            summaryMessage += `* 1 hour ago\n\n`
+            summaryMessage += `⏱️ 1 hour ago\n\n`
             summaryMessage += `Total alerts: *${alerts.length}*\n\n`;
             summaryMessage += `Total unique IPs: *${Object.keys(ipCounts).length}*\n\n`;
             summaryMessage += `Top 5 IPs with most alerts:\n\n`;
-            summaryMessage += `🖥️ *Agent*: ${sortedEntries[0][1].agent}\n\n`;
-            for (const [ip, data] of sortedEntries) {
+            for (const [ip, data] of sortedEntries.slice(0, 5)) {
                 summaryMessage += `🖥️ *Agent*: ${data.agent}\n`;
                 summaryMessage += `🔔 *Rule Level*: ${data.level}\n`;
                 summaryMessage += `🔄 *Triggered*: ${data.count} times\n`;
@@ -396,6 +395,7 @@ async function handleActiveResponseSummary(client, message, args) {
             }
 
             await message.reply(summaryMessage);
+            await message.reply(`See another summary at ${process.env.LOG_URL}/summary`);
         } else {
             await message.reply("No alerts available.");
         }
