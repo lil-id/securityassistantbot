@@ -382,6 +382,11 @@ async function handleActiveResponseSummary(client, message, args) {
             );
 
             let summaryMessage = "Summary of alerts\n\n";
+            summaryMessage += `* 1 hour ago\n\n`
+            summaryMessage += `Total alerts: *${alerts.length}*\n\n`;
+            summaryMessage += `Total unique IPs: *${Object.keys(ipCounts).length}*\n\n`;
+            summaryMessage += `Top 5 IPs with most alerts:\n\n`;
+            summaryMessage += `🖥️ *Agent*: ${sortedEntries[0][1].agent}\n\n`;
             for (const [ip, data] of sortedEntries) {
                 summaryMessage += `🖥️ *Agent*: ${data.agent}\n`;
                 summaryMessage += `🔔 *Rule Level*: ${data.level}\n`;
