@@ -4,14 +4,17 @@
 Before forwarding, Monsta **enriches each alert** by checking the IP against external threat intelligence sources such as **AbuseIPDB** and **ThreatFox**, helping analysts **prioritize alerts** based on reputation and context. This project automates various security checks and alerting functions using tools and APIs integrated into the bot.
 
 ## 🪄 Preview
-| ![Help Command](https://i.imgur.com/jpBI0Wk.jpeg) | ![Account Monitoring](https://i.imgur.com/MwWVZop.jpeg) | ![Server Status & Account Monitoring](https://i.imgur.com/IBuxTil.jpeg) |
+| ![Help Command](https://i.imgur.com/jpBI0Wk.jpeg) | ![Server Status](https://i.imgur.com/IBuxTil.jpeg) | ![Account Monitoring](https://i.imgur.com/MwWVZop.jpeg) 
 |:--:|:--:|:--:|
+| Help Command | Server Monitoring | Account Monitoring |
 
 | ![Ask AI](https://i.imgur.com/GqF6iBo.jpeg) | ![Snapshot](https://i.imgur.com/AvjWyTV.jpeg) | ![Container Active](https://i.imgur.com/nB7Mx6M.jpeg) |
 |:--:|:--:|:--:|
+| Asking AI | Snapshot | Container Check |
 
 | ![AI Result](https://i.imgur.com/y9vCA3w.jpeg) | ![Interesting Alert](https://i.imgur.com/s5JKFpu.jpeg) | ![Security Alert](https://i.imgur.com/HElUpb9.jpeg) |
 |:--:|:--:|:--:|
+| AI Answer | Interesting Alert | Common Alert |
 
 and many more...
 
