@@ -16,6 +16,10 @@ Before forwarding, Monsta **enriches each alert** by checking the IP against ext
 |:--:|:--:|:--:|
 | AI Answer | Interesting Alert | Common Alert |
 
+| ![Threat Hunting](https://i.imgur.com/R9V4RFk.jpeg) | ![Malware](https://i.imgur.com/KQ743Xl.jpeg) | ![Summary of Alert](https://i.imgur.com/FUfiM00.jpeg) |
+|:--:|:--:|:--:|
+| Threat Hunting | Malware List | Summary of Alert |
+
 and many more...
 
 ## 📂 Project Structure
