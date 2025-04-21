@@ -3,6 +3,18 @@
 
 Before forwarding, Monsta **enriches each alert** by checking the IP against external threat intelligence sources such as **AbuseIPDB** and **ThreatFox**, helping analysts **prioritize alerts** based on reputation and context. This project automates various security checks and alerting functions using tools and APIs integrated into the bot.
 
+## 🪄 Preview
+| ![Help Command](https://i.imgur.com/jpBI0Wk.jpeg) | ![Account Monitoring](https://i.imgur.com/MwWVZop.jpeg) | ![Server Status & Account Monitoring](https://i.imgur.com/IBuxTil.jpeg) |
+|:--:|:--:|:--:|
+
+| ![Ask AI](https://i.imgur.com/GqF6iBo.jpeg) | ![Snapshot](https://i.imgur.com/AvjWyTV.jpeg) | ![Container Active](https://i.imgur.com/nB7Mx6M.jpeg) |
+|:--:|:--:|:--:|
+
+| ![AI Result](https://i.imgur.com/y9vCA3w.jpeg) | ![Interesting Alert](https://i.imgur.com/s5JKFpu.jpeg) | ![Security Alert](https://i.imgur.com/HElUpb9.jpeg) |
+|:--:|:--:|:--:|
+
+and many more...
+
 ## 📂 Project Structure
 
 ```
@@ -176,7 +188,7 @@ This will run all tests in the `/test` folder and display test results in the te
   The bot records command history data and provides analysis via AI-powered tools. This helps in auditing activities and investigating potential security incidents.
 
 - **📸 Snapshot Management:**  
-  The bot can create system snapshots using predefined shell scripts. These snapshots are useful for system state analysis and are scheduled using cron jobs. The bot also allows dynamic updates to the cron schedule.
+  The bot can create basic system snapshots using predefined shell scripts. These snapshots are useful for system state analysis and are scheduled using cron jobs. The bot also allows dynamic updates to the cron schedule.
 
 - **🌐 Threat Intelligence Integration:**  
   The bot integrates with external threat intelligence sources like ThreatFox and Abuse IP DB to enrich alerts with additional context. This helps teams validate threats and take appropriate actions.
