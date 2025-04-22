@@ -111,7 +111,9 @@ describe("handleSnapshot", () => {
                 dayOfWeek: "*",
             },
         });
-        expect(message.reply).toHaveBeenCalledWith("Cron schedule successfully updated to: 59 23 * * *");
+        
+        const expectedMessage = `📅 Cron schedule successfully updated to:\n\n*23:59 WITA* (UTC+8)`;
+        expect(message.reply).toHaveBeenCalledWith(expectedMessage);
     });
 
     test("should log and reply with an error message if snapshot script execution fails", async () => {

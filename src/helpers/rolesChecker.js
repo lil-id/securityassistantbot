@@ -27,7 +27,7 @@ async function checkRoles(sender) {
         });
     }
 
-    return adminOrUser;
+    return adminOrUser || null;
 }
 
 module.exports = { checkRoles };

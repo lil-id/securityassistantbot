@@ -1,4 +1,4 @@
-const { handleAddAdminCommand } = require("../src/controllers/admins/addAdminController");
+const { handleAddDeleteAdminCommand } = require("../src/controllers/admins/addAdminController");
 const { botAdmins } = require("../src/models/admins/adminModel");
 const { adminHelpMessage } = require("../src/views/responseMessage");
 
@@ -7,7 +7,7 @@ jest.mock("../src/views/responseMessage", () => ({
     adminHelpMessage: "Help message for admins"
 }));
 
-describe("handleAddAdminCommand", () => {
+describe("handleAddDeleteAdminCommand", () => {
     let client, message, chat;
 
     beforeEach(() => {
@@ -33,10 +33,11 @@ describe("handleAddAdminCommand", () => {
             { id: { _serialized: "admin2" }, name: "Admin Two" }
         ];
 
+        const args = ["@admin1", "@admin2"];
         message.getMentions.mockResolvedValue(mentions);
         botAdmins.checkExistingAdmins.mockResolvedValue(["admin1"]);
 
-        await handleAddAdminCommand(client, message);
+        await handleAddDeleteAdminCommand(client, message, args);
 
         expect(client.getChatById).toHaveBeenCalledWith("test_from");
         expect(chat.sendSeen).toHaveBeenCalled();
@@ -52,11 +53,12 @@ describe("handleAddAdminCommand", () => {
             { id: { _serialized: "admin2" }, name: "Admin Two" }
         ];
 
+        const args = ["@admin1", "@admin2"];
         message.getMentions.mockResolvedValue(mentions);
         botAdmins.checkExistingAdmins.mockResolvedValue([]);
         botAdmins.addAdmins.mockResolvedValue(["Admin One", "Admin Two"]);
 
-        await handleAddAdminCommand(client, message);
+        await handleAddDeleteAdminCommand(client, message, args);
 
         expect(client.getChatById).toHaveBeenCalledWith("test_from");
         expect(chat.sendSeen).toHaveBeenCalled();
@@ -74,11 +76,12 @@ describe("handleAddAdminCommand", () => {
             { id: { _serialized: "admin2" }, name: "Admin Two" }
         ];
 
+        const args = ["@admin1", "@admin2"];
         message.getMentions.mockResolvedValue(mentions);
         botAdmins.checkExistingAdmins.mockResolvedValue(["admin1"]);
         botAdmins.addAdmins.mockResolvedValue(["Admin Two"]);
 
-        await handleAddAdminCommand(client, message);
+        await handleAddDeleteAdminCommand(client, message, args);
 
         expect(client.getChatById).toHaveBeenCalledWith("test_from");
         expect(chat.sendSeen).toHaveBeenCalled();
@@ -91,5 +94,22 @@ describe("handleAddAdminCommand", () => {
         );
         expect(message.reply).toHaveBeenCalledWith("Welcome to the team chief! 🎉");
         expect(message.reply).toHaveBeenCalledWith(adminHelpMessage);
+    });
+
+    it("should notify if no valid admins are mentioned", async () => {
+        const mentions = [];
+        const args = [];
+        message.getMentions.mockResolvedValue(mentions);
+
+        await handleAddDeleteAdminCommand(client, message, args);
+
+        expect(client.getChatById).toHaveBeenCalledWith("test_from");
+        expect(chat.sendSeen).toHaveBeenCalled();
+        expect(chat.sendStateTyping).toHaveBeenCalled();
+        expect(message.reply).toHaveBeenCalledWith("No valid admins mentioned.");
+        expect(message.reply).toHaveBeenCalledWith(
+            "Usage:\n`!admin @mention1 @mention2` - To add a new admin\n\n" +
+            "`!admin remove @mention1 @mention2` - To remove an admin"
+        );
     });
 });

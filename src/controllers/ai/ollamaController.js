@@ -19,16 +19,6 @@ async function handleAddAICommand(client, message, args) {
         }
     }
 
-    // if (content.length === 0) {
-    //     await message.reply(
-    //         "Please *select security alert* to get security recommendation and type \n!ask"
-    //     );
-    //     await message.reply(
-    //         "or provide argument text for custom question.\n\nExample: \n\n*!ask what is SOC?*"
-    //     );
-    //     return;
-    // }
-
     if (content.length === 0) {
         let prompt =
         `"Act as a senior SOC analyst. Given the following security alert from Wazuh, analyze the potential threat, determine its severity, and recommend remediation steps. Provide your reasoning based on best SOC practices."\n\n`;

@@ -60,7 +60,7 @@ describe("handleActiveResponseSummary", () => {
     
         await handleActiveResponseSummary(client, message, args);
         
-        expect(message.reply).toHaveBeenCalledTimes(1);
+        expect(message.reply).toHaveBeenCalledTimes(2);
         expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("Summary of alerts"));
     });
     

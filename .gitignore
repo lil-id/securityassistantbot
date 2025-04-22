@@ -131,7 +131,6 @@ dist
 
 # WhatsApp Cache
 .wwebjs_*
-
 .*env
 
 # Playwright

@@ -31,8 +31,8 @@ describe('handleInfo', () => {
         expect(client.getChatById).toHaveBeenCalledWith('testUser');
         expect(chat.sendSeen).toHaveBeenCalled();
         expect(chat.sendStateTyping).toHaveBeenCalled();
-        expect(logger.info).toHaveBeenCalledWith('Bot Security (Boty) v1.0');
-        expect(message.reply).toHaveBeenCalledWith('Bot Security (Boty) v1.0\nCreated by lil-id');
+        expect(logger.info).toHaveBeenCalledWith('Morning Star (Monsta) v1.0');
+        expect(message.reply).toHaveBeenCalledWith('Morning Star (Monsta) v1.0\nCreated by lil-id');
     });
 
     it('should log error and reply with error message if an error occurs', async () => {

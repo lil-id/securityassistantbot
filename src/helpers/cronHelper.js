@@ -9,7 +9,6 @@ function startCronJob(schedule, client, groups) {
         throw new Error("Invalid cron schedule");
     }
 
-    console.log(newSchedule);
     const job = cron.schedule(newSchedule, () => {
         logger.info("Running scheduled system snapshot...");
         client.sendMessage(
