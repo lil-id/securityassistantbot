@@ -83,4 +83,64 @@ describe("handleActiveResponseSummary", () => {
 
         expect(logger.error).toHaveBeenCalledWith("Error getting active response:", testError);
     });
+
+    it("should handle alerts with multiple IPs and provide a detailed summary", async () => {
+        redisClient.keys.mockResolvedValue(["alerts:1.1.1.1", "alerts:2.2.2.2", "alerts:3.3.3.3"]);
+        redisClient.lRange
+            .mockResolvedValueOnce([
+                JSON.stringify({ src_ip: "1.1.1.1", level: 5, agent: "Agent A" }),
+                JSON.stringify({ src_ip: "1.1.1.1", level: 6, agent: "Agent A" }),
+            ])
+            .mockResolvedValueOnce([
+                JSON.stringify({ src_ip: "2.2.2.2", level: 4, agent: "Agent B" }),
+            ])
+            .mockResolvedValueOnce([
+                JSON.stringify({ src_ip: "3.3.3.3", level: 3, agent: "Agent C" }),
+            ]);
+
+        await handleActiveResponseSummary(client, message, args);
+
+        expect(message.reply).toHaveBeenCalledTimes(2);
+        expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("Summary of alerts"));
+        expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("Top 5 IPs with most alerts"));
+        expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("1.1.1.1"));
+        expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("2.2.2.2"));
+        expect(message.reply).toHaveBeenCalledWith(expect.stringContaining("3.3.3.3"));
+    });
+
+    it("should handle an empty response from Redis keys gracefully", async () => {
+        redisClient.keys.mockResolvedValue(null);
+
+        await handleActiveResponseSummary(client, message, args);
+
+        expect(message.reply).toHaveBeenCalledWith("No alerts available.");
+    });
+
+    it("should handle Redis lRange returning empty arrays for all keys", async () => {
+        redisClient.keys.mockResolvedValue(["alerts:1.1.1.1", "alerts:2.2.2.2"]);
+        redisClient.lRange.mockResolvedValue([]);
+    
+        await handleActiveResponseSummary(client, message, args);
+    
+        expect(message.reply).toHaveBeenCalledTimes(2);
+        expect(message.reply).toHaveBeenNthCalledWith(
+            1,
+            "Summary of alerts\n\n⏱️ 1 hour ago\n\nTotal alerts: *0*\n\nTotal unique IPs: *0*\n\nTop 5 IPs with most alerts:\n\n"
+        );
+        expect(message.reply).toHaveBeenNthCalledWith(
+            2,
+            `See another summary at ${process.env.LOG_URL}/summary`
+        );
+    });
+
+    it("should handle Redis lRange returning malformed JSON", async () => {
+        redisClient.keys.mockResolvedValue(["alerts:1.1.1.1"]);
+        redisClient.lRange.mockResolvedValue(["{malformedJson"]);
+
+        logger.error = jest.fn();
+
+        await handleActiveResponseSummary(client, message, args);
+
+        expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("Error getting active response:"), expect.any(Error));
+    });
 });

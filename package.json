@@ -8,6 +8,7 @@
     "dev": "npx nodemon app.js",
     "migration": "npx prisma migrate deploy && npm run production",
     "test": "npx jest --env=node",
+    "coverage": "npx jest --coverage",
     "test-verbose": "jest --verbose --runInBand"
   },
   "prisma": {
