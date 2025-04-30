@@ -11,7 +11,7 @@ const {
     checkQuotaAbuseIPDB,
 } = require("../helpers/abuseipdb/report");
 const { isPrivateIP } = require("../helpers/privateIpcheck");
-const { abuseIpDBCheck } = require("../helpers/abuseipdb/checkIp");
+const { abuseIpDBCheck } = require("../helpers/abuseipdb/abuseCheck");
 const { checkThreatIntel } = require("../helpers/threatIntel");
 require("dotenv").config();
 

@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 async function abuseIpDBCheck(ip, retries = 3) {
     logger.info(`Checking threat intelligence for IP: ${ip}`);
     try {
