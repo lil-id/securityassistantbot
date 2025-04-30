@@ -8,4 +8,4 @@ function isPrivateIP(ip) {
     );
 }
 
-export default isPrivateIP;
+module.exports = { isPrivateIP};

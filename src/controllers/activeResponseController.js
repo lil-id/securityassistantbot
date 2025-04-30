@@ -8,13 +8,10 @@ const adminSession = require("../middleware/adminsMiddleware");
 const { lookupThreat } = require("./handleThreatIntelligence");
 const { apiKeyMiddleware } = require("../middleware/wazuhMiddleware");
 const {
-    classifyAlertToAbuseCategoryByRule,
-} = require("../helpers/abuseipdb/categoryMapper");
-const {
     reportToAbuseIPDB,
     checkQuotaAbuseIPDB,
 } = require("../helpers/abuseipdb/report");
-const { default: isPrivateIP } = require("../helpers/privateIpcheck");
+const { isPrivateIP } = require("../helpers/privateIpcheck");
 require("dotenv").config();
 
 const wazuhRouter = Router();
