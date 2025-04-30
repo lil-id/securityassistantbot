@@ -5,13 +5,14 @@ const logger = require("../helpers/logger");
 const userSession = require("../middleware/usersMiddleware");
 const { redisClient } = require("../helpers/redisConnection");
 const adminSession = require("../middleware/adminsMiddleware");
-const { lookupThreat } = require("./handleThreatIntelligence");
 const { apiKeyMiddleware } = require("../middleware/wazuhMiddleware");
 const {
     reportToAbuseIPDB,
     checkQuotaAbuseIPDB,
 } = require("../helpers/abuseipdb/report");
 const { isPrivateIP } = require("../helpers/privateIpcheck");
+const { abuseIpDBCheck } = require("../helpers/abuseipdb/checkIp");
+const { checkThreatIntel } = require("../helpers/threatIntel");
 require("dotenv").config();
 
 const wazuhRouter = Router();
@@ -31,40 +32,6 @@ const allowEitherSession = (req, res, next) => {
         });
     });
 };
-
-// Check if IP is malicious using an external threat intelligence API
-async function abuseIpDBCheck(ip, retries = 3) {
-    logger.info(`Checking threat intelligence for IP: ${ip}`);
-    try {
-        const response = await axios.get(
-            `${process.env.ABUSEIPDB_API_URL}/check?ipAddress=${ip}`,
-            {
-                headers: { Key: process.env.ABUSEIPDB_API_KEY },
-                timeout: 5000,
-                signal: AbortSignal.timeout(5000),
-            }
-        );
-        const confidenceScore = response.data.data.abuseConfidenceScore;
-        return {
-            isMalicious: confidenceScore >= 50,
-            data: response.data.data,
-        };
-    } catch (error) {
-        if (error.code === "ETIMEDOUT" && retries > 0) {
-            logger.warn(
-                `Timeout occurred. Retrying... (${retries} retries left)`
-            );
-            return abuseIpDBCheck(ip, retries - 1);
-        }
-        logger.error("Threat intelligence check failed", error);
-        return { isMalicious: false, data: null };
-    }
-}
-
-async function threatFoxCheck(ioc) {
-    const threatFoxResult = await lookupThreat(ioc);
-    return threatFoxResult;
-}
 
 // Track alerts from the same IP
 async function trackAlert(ip) {
@@ -130,63 +97,107 @@ async function sendAlertMessage(client, groups, alert) {
         "Running Threat Intelligence checks..."
     );
 
-    const getThreatFox = await threatFoxCheck(alert.src_ip);
-    const getAbuseIpDB = await abuseIpDBCheck(alert.src_ip);
+    const intel = await checkThreatIntel(alert.src_ip);
 
-    if (getThreatFox || getAbuseIpDB) {
-        const foundIn = [
-            getThreatFox && "ThreatFox",
-            getAbuseIpDB.data && "AbuseIP DB",
-        ].filter(Boolean);
+    if (intel.sources.length === 0 || intel.confidence === null) {
+        const reason = intel.error
+            ? `AbuseIPDB or ThreatFox check failed (API error or quota limit).`
+            : `This IP is not found in AbuseIP DB or ThreatFox.`;
 
-        const confidenceLevel =
-            getThreatFox?.confidence_level ??
-            getAbuseIpDB.data?.abuseConfidenceScore;
+        await client.sendMessage(
+            groups.announcement,
+            `No Threat Intelligence Data Found!\n` +
+                `🌐 *IP:* ${alert.src_ip}\n` +
+                `⚠️ ${reason}`
+        );
+    } else if (intel.confidence <= 25) {
+        await client.sendMessage(
+            groups.member,
+            `🪪 *ID*: ${alert.id}\n` +
+                `🖥️ *Agent*: ${alert.agent}\n` +
+                `📝 *Description*: ${alert.description}\n` +
+                `🔔 *Rule Level*: ${alert.level}\n` +
+                `🕒 *Timestamp*: ${alert.timestamp}\n` +
+                `🌐 *Src IP*: ${alert.src_ip}\n` +
+                `🏷️ *Groups*: ${alert.groups}\n` +
+                `📋 *Full Log*: ${alert.full_log}\n` +
+                `🔗 *Link Detail*: ${process.env.LOG_URL}/dashboard?ip=${alert.src_ip}\n`
+        );
 
-        if (
-            foundIn.length === 0 ||
-            confidenceLevel === null ||
-            confidenceLevel === undefined
-        ) {
-            await client.sendMessage(
-                groups.announcement,
-                `No Threat Intelligence Data Found!\n` +
-                    `🌐 *IP:* ${alert.src_ip}\n` +
-                    `⚠️ This IP is not found in AbuseIP DB or ThreatFox.`
-            );
-        } else if (confidenceLevel <= 25) {
-            await client.sendMessage(
-                groups.member,
-                `🪪 *ID*: ${alert.id}\n` +
-                    `🖥️ *Agent*: ${alert.agent}\n` +
-                    `📝 *Description*: ${alert.description}\n` +
-                    `🔔 *Rule Level*: ${alert.level}\n` +
-                    `🕒 *Timestamp*: ${alert.timestamp}\n` +
-                    `🌐 *Src IP*: ${alert.src_ip}\n` +
-                    `🏷️ *Groups*: ${alert.groups}\n` +
-                    `📋 *Full Log*: ${alert.full_log}\n` +
-                    `🔗 *Link Detail*: ${process.env.LOG_URL}/dashboard?ip=${alert.src_ip}\n`
-            );
-
-            await client.sendMessage(
-                groups.member,
-                `Interesting Alert Detected!\n` +
-                    `🌐 *IP:* ${alert.src_ip}\n` +
-                    `🎯 *Confidence Level:* ${confidenceLevel}\n` +
-                    `⚠️ This Confidence IP is Low (<= 25) or is not found in AbuseIP DB or ThreatFox.`
-            );
-        } else {
-            await client.sendMessage(
-                groups.announcement,
-                `Threat Intelligence Alert!\n` +
-                    `🌐 *Malicious IP:* ${alert.src_ip}\n` +
-                    `🕵️‍♂️ *Found at:* ${foundIn.join(", ")}\n` +
-                    `🎯 *Confidence Level:* ${confidenceLevel}`
-            );
-        }
+        await client.sendMessage(
+            groups.member,
+            `Interesting Alert Detected!\n` +
+                `🌐 *IP:* ${alert.src_ip}\n` +
+                `🎯 *Confidence Level:* ${intel.confidence}\n` +
+                `⚠️ Low Confidence or New IP`
+        );
     } else {
-        logger.info("No ThreatFox or Abuse IP DB data found for this IP.");
+        await client.sendMessage(
+            groups.announcement,
+            `Threat Intelligence Alert!\n` +
+                `🌐 *Malicious IP:* ${alert.src_ip}\n` +
+                `🕵️‍♂️ *Found at:* ${intel.sources.join(", ")}\n` +
+                `🎯 *Confidence Level:* ${intel.confidence}`
+        );
     }
+
+    // const getThreatFox = await threatFoxCheck(alert.src_ip);
+    // const getAbuseIpDB = await abuseIpDBCheck(alert.src_ip);
+
+    // if (getThreatFox || getAbuseIpDB) {
+    //     const foundIn = [
+    //         getThreatFox && "ThreatFox",
+    //         getAbuseIpDB.data && "AbuseIP DB",
+    //     ].filter(Boolean);
+
+    //     const confidenceLevel =
+    //         getThreatFox?.confidence_level ??
+    //         getAbuseIpDB.data?.abuseConfidenceScore;
+
+    //     if (
+    //         foundIn.length === 0 ||
+    //         confidenceLevel === null ||
+    //         confidenceLevel === undefined
+    //     ) {
+    //         await client.sendMessage(
+    //             groups.announcement,
+    //             `No Threat Intelligence Data Found!\n` +
+    //                 `🌐 *IP:* ${alert.src_ip}\n` +
+    //                 `⚠️ This IP is not found in AbuseIP DB or ThreatFox.`
+    //         );
+    //     } else if (confidenceLevel <= 25) {
+    //         await client.sendMessage(
+    //             groups.member,
+    //             `🪪 *ID*: ${alert.id}\n` +
+    //                 `🖥️ *Agent*: ${alert.agent}\n` +
+    //                 `📝 *Description*: ${alert.description}\n` +
+    //                 `🔔 *Rule Level*: ${alert.level}\n` +
+    //                 `🕒 *Timestamp*: ${alert.timestamp}\n` +
+    //                 `🌐 *Src IP*: ${alert.src_ip}\n` +
+    //                 `🏷️ *Groups*: ${alert.groups}\n` +
+    //                 `📋 *Full Log*: ${alert.full_log}\n` +
+    //                 `🔗 *Link Detail*: ${process.env.LOG_URL}/dashboard?ip=${alert.src_ip}\n`
+    //         );
+
+    //         await client.sendMessage(
+    //             groups.member,
+    //             `Interesting Alert Detected!\n` +
+    //                 `🌐 *IP:* ${alert.src_ip}\n` +
+    //                 `🎯 *Confidence Level:* ${confidenceLevel}\n` +
+    //                 `⚠️ This Confidence IP is Low (<= 25) or is not found in AbuseIP DB or ThreatFox.`
+    //         );
+    //     } else {
+    //         await client.sendMessage(
+    //             groups.announcement,
+    //             `Threat Intelligence Alert!\n` +
+    //                 `🌐 *Malicious IP:* ${alert.src_ip}\n` +
+    //                 `🕵️‍♂️ *Found at:* ${foundIn.join(", ")}\n` +
+    //                 `🎯 *Confidence Level:* ${confidenceLevel}`
+    //         );
+    //     }
+    // } else {
+    //     logger.info("No ThreatFox or Abuse IP DB data found for this IP.");
+    // }
 }
 
 // Handle alert escalation
@@ -246,13 +257,12 @@ async function processRule5402Alert(client, groups, alert) {
 
 // Process incoming alert
 async function processAlert(alert, client, groups) {
-
     if (
-        !alert?.src_ip || 
-        alert.src_ip === '-' || 
-        alert.src_ip === 'unknown' || 
+        !alert?.src_ip ||
+        alert.src_ip === "-" ||
+        alert.src_ip === "unknown" ||
         isPrivateIP(alert.src_ip)
-      ) {
+    ) {
         logger.info(`⛔ Skip alert (invalid IP): ${alert?.src_ip}`);
         return;
     }
@@ -273,8 +283,7 @@ async function processAlert(alert, client, groups) {
 
         if (count === 1) {
             await handleAlertEscalation(client, groups, alert);
-        }
-        else if (count % 5 === 0) {
+        } else if (count % 5 === 0) {
             await triggerActiveReponseNotification(
                 client,
                 groups,
