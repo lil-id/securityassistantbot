@@ -246,6 +246,17 @@ async function processRule5402Alert(client, groups, alert) {
 
 // Process incoming alert
 async function processAlert(alert, client, groups) {
+
+    if (
+        !alert?.src_ip || 
+        alert.src_ip === '-' || 
+        alert.src_ip === 'unknown' || 
+        isPrivateIP(alert.src_ip)
+      ) {
+        logger.info(`⛔ Skip alert (invalid IP): ${alert?.src_ip}`);
+        return;
+    }
+
     if (!alert?.src_ip || isPrivateIP(alert.src_ip)) {
         logger.info(`⛔ Ignoring private/internal IP: ${alert?.src_ip}`);
         return;

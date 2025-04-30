@@ -16,6 +16,11 @@ async function checkQuotaAbuseIPDB(apiKey) {
         },
         params: { ipAddress: '127.0.0.1' }, // safe dummy IP
       });
+
+      if (res?.status === 429 || parseInt(remaining) <= 0) {
+        console.warn(`[Monsta] 🚫 AbuseIPDB quota exceeded (429). Remaining: ${remaining}`);
+        return false;
+      }      
   
       const remaining = res?.headers['x-ratelimit-remaining'];
       if (parseInt(remaining) <= 0) {
