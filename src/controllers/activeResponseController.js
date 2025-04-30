@@ -1,12 +1,20 @@
-const { Router } = require("express");
-const { redisClient } = require("../helpers/redisConnection");
 const https = require("https");
 const axios = require("axios");
+const { Router } = require("express");
 const logger = require("../helpers/logger");
 const userSession = require("../middleware/usersMiddleware");
+const { redisClient } = require("../helpers/redisConnection");
 const adminSession = require("../middleware/adminsMiddleware");
-const { apiKeyMiddleware } = require("../middleware/wazuhMiddleware");
 const { lookupThreat } = require("./handleThreatIntelligence");
+const { apiKeyMiddleware } = require("../middleware/wazuhMiddleware");
+const {
+    classifyAlertToAbuseCategoryByRule,
+} = require("../helpers/abuseipdb/categoryMapper");
+const {
+    reportToAbuseIPDB,
+    checkQuotaAbuseIPDB,
+} = require("../helpers/abuseipdb/report");
+const { default: isPrivateIP } = require("../helpers/privateIpcheck");
 require("dotenv").config();
 
 const wazuhRouter = Router();
@@ -81,7 +89,7 @@ async function storeAlert(alert) {
     logger.info("Storing alert in Redis");
     const key = `alerts:${alert.src_ip}`;
     await redisClient.rPush(key, JSON.stringify(alert)); // Push alert to list
-    await redisClient.expire(key, 3600); // Set expiry to 60 minutes 
+    await redisClient.expire(key, 3600); // Set expiry to 60 minutes
 }
 
 // Determine if an alert is interesting
@@ -241,6 +249,11 @@ async function processRule5402Alert(client, groups, alert) {
 
 // Process incoming alert
 async function processAlert(alert, client, groups) {
+    if (!alert?.src_ip || isPrivateIP(alert.src_ip)) {
+        logger.info(`⛔ Ignoring private/internal IP: ${alert?.src_ip}`);
+        return;
+    }
+
     if (alert.level >= 5) {
         await storeAlert(alert);
         const count = await trackAlert(alert.src_ip);
@@ -252,13 +265,60 @@ async function processAlert(alert, client, groups) {
 
         if (count === 1) {
             await handleAlertEscalation(client, groups, alert);
-        } else if (count % 5 === 0) {
+        }
+        else if (count % 5 === 0) {
             await triggerActiveReponseNotification(
                 client,
                 groups,
                 alert,
                 count
             );
+        }
+        // Auto-report ke AbuseIPDB jika count cukup dan belum pernah dilaporkan
+        else if (count >= 5) {
+            const reportedKey = `reported_ip:${alert.src_ip}`;
+            const alreadyReported = await redisClient.get(reportedKey);
+
+            if (!alreadyReported) {
+                const abuseInfo = await abuseIpDBCheck(alert.src_ip);
+                const score = abuseInfo?.data?.abuseConfidenceScore || 0;
+
+                if (score < 25) {
+                    const hasQuota = await checkQuotaAbuseIPDB(
+                        process.env.ABUSEIPDB_API_KEY
+                    );
+
+                    if (hasQuota) {
+                        const reportResult = await reportToAbuseIPDB(
+                            alert.src_ip,
+                            alert,
+                            process.env.ABUSEIPDB_API_KEY
+                        );
+
+                        if (reportResult?.data) {
+                            await redisClient.setEx(reportedKey, 86400, "1"); // Tandai sudah dilaporkan 1x24 jam
+                            await client.sendMessage(
+                                groups.alertTrigger,
+                                `✅ *Auto-report sent to AbuseIPDB!*\n🌐 IP: ${
+                                    alert.src_ip
+                                }\n🗂 Categories: ${reportResult.data.categories.join(
+                                    ", "
+                                )}`
+                            );
+                        } else {
+                            await client.sendMessage(
+                                groups.alertTrigger,
+                                `❌ Gagal report ${alert.src_ip} ke AbuseIPDB.`
+                            );
+                        }
+                    } else {
+                        await client.sendMessage(
+                            groups.alertTrigger,
+                            `⚠️ Kuota AbuseIPDB habis. Tidak bisa report ${alert.src_ip}.`
+                        );
+                    }
+                }
+            }
         }
     } else if (alert.rule === "5402" && alert.level === 3) {
         await processRule5402Alert(client, groups, alert);
@@ -283,10 +343,7 @@ function setupActiveResponseRoutes(client, groups) {
                 description: alert.rule.description,
                 level: alert.rule.level,
                 timestamp: alert.timestamp,
-                src_ip:
-                    alert.data && alert.data.srcip
-                        ? alert.data.srcip
-                        : "-",
+                src_ip: alert.data && alert.data.srcip ? alert.data.srcip : "-",
                 groups: alert.rule.groups,
                 full_log: alert.full_log,
             };
@@ -327,7 +384,7 @@ wazuhRouter.get("/alerts/summary", allowEitherSession, async (req, res) => {
     try {
         logger.info("Fetching all alerts...");
         const keys = (await redisClient.keys("alerts:*")) || [];
-        
+
         // Run all Redis queries in parallel
         const alertLists = await Promise.all(
             keys.map((key) => redisClient.lRange(key, 0, -1))
@@ -382,9 +439,11 @@ async function handleActiveResponseSummary(client, message, args) {
             );
 
             let summaryMessage = "Summary of alerts\n\n";
-            summaryMessage += `⏱️ 1 hour ago\n\n`
+            summaryMessage += `⏱️ 1 hour ago\n\n`;
             summaryMessage += `Total alerts: *${alerts.length}*\n\n`;
-            summaryMessage += `Total unique IPs: *${Object.keys(ipCounts).length}*\n\n`;
+            summaryMessage += `Total unique IPs: *${
+                Object.keys(ipCounts).length
+            }*\n\n`;
             summaryMessage += `Top 5 IPs with most alerts:\n\n`;
             for (const [ip, data] of sortedEntries.slice(0, 5)) {
                 summaryMessage += `🖥️ *Agent*: ${data.agent}\n`;
@@ -395,7 +454,9 @@ async function handleActiveResponseSummary(client, message, args) {
             }
 
             await message.reply(summaryMessage);
-            await message.reply(`See another summary at ${process.env.LOG_URL}/summary`);
+            await message.reply(
+                `See another summary at ${process.env.LOG_URL}/summary`
+            );
         } else {
             await message.reply("No alerts available.");
         }
@@ -475,5 +536,5 @@ module.exports = {
     isInteresting,
     sendAlertMessage,
     processAlert,
-    trackAlert
+    trackAlert,
 };
