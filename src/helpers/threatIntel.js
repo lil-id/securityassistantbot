@@ -18,14 +18,14 @@ async function checkThreatIntel(ip) {
     let error = false;
     const sources = [];
 
+    // === Cek AbuseIPDB ===
     try {
         abuseResult = await abuseIpDBCheck(ip);
 
-        if (
-            !abuseResult ||
-            (abuseResult?.data === null &&
-                abuseResult?.errors?.[0]?.status === 429)
-        ) {
+        const quotaLimit = abuseResult?.errors?.[0]?.status === 429;
+        const nullData = abuseResult?.data === null;
+
+        if (!abuseResult || quotaLimit || nullData) {
             error = true;
         } else if (abuseResult?.data) {
             sources.push("AbuseIP DB");
@@ -34,6 +34,7 @@ async function checkThreatIntel(ip) {
         error = true;
     }
 
+    // === Cek ThreatFox ===
     try {
         threatResult = await threatFoxCheck(ip);
         if (threatResult) {
