@@ -101,6 +101,7 @@ async function sendAlertMessage(client, groups, alert) {
     const intel = await checkThreatIntel(alert.src_ip);
 
     if (intel.sources.length === 0 || intel.confidence === null) {
+        console.log(intel.error);
         const reason = intel.error
             ? `AbuseIPDB or ThreatFox check failed (API error or quota limit).`
             : `This IP is not found in AbuseIP DB or ThreatFox.`;
