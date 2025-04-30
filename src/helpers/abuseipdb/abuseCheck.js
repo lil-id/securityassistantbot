@@ -1,3 +1,5 @@
+const logger = require("../logger");
+
 require("dotenv").config();
 
 async function abuseIpDBCheck(ip, retries = 3) {
