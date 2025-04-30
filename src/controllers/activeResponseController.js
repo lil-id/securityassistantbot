@@ -13,6 +13,7 @@ const {
 const { isPrivateIP } = require("../helpers/privateIpcheck");
 const { abuseIpDBCheck } = require("../helpers/abuseipdb/abuseCheck");
 const { checkThreatIntel } = require("../helpers/threatIntel");
+const { threatFoxCheck } = require("../helpers/threatfox/threatFox");
 require("dotenv").config();
 
 const wazuhRouter = Router();
