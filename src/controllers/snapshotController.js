@@ -81,7 +81,7 @@ async function handleSnapshot(client, message, args, groups) {
         logger.info(dynamicMessage);
         await message.reply(dynamicMessage);
     } else {
-        await message.reply("📌 *Cron format:*\n`sec min hour day month week`\n🔢 *Value ranges:*\n- ⏳ Second: `0-59`\n- ⏰ Minute: `0-59`\n- 🕛 Hour: `0-23`\n- 📅 Day of Month: `1-31`\n- 🗓️ Month: `1-12` (or names)\n- 📆 Day of Week: `0-7` (or names, 0 & 7 = Sunday)\n\n✅ Example:\n`!snap 59 23 * * *` → Runs at *11:59 PM* daily");
+        await message.reply("📌 *Cron format:*\n`sec min hour day month week`\n\n🔢 *Value ranges:*\n- ⏳ Second: `0-59`\n- ⏰ Minute: `0-59`\n- 🕛 Hour: `0-23`\n- 📅 Day of Month: `1-31`\n- 🗓️ Month: `1-12` (or names)\n- 📆 Day of Week: `0-7` (or names, 0 & 7 = Sunday)\n\n✅ Example:\n`!snap 59 23 * * *` → Runs at *11:59 PM* daily");
     }
 }
 
