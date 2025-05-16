@@ -24,7 +24,7 @@ async function handleAddAICommand(client, message, args) {
 
     if (content.length === 0) {
         message.reply(
-            "Please provide argument text.\n\n`!ask <your question>` - Ask with your custom question \n`!ask default` - Using our default prompt\n\n✅ Example:\n`!ask what is infostealer malware? explain to me`"
+            `Please provide argument text.\n\n\`!ask default\` - Using default prompt\n\`!ask <your question>\` - Ask with your custom question \n\n🧬 Default Prompt:\n${prompt}\n ✅ Example:\n\`!ask what is infostealer malware? explain to me\``
         );
         return;
     } else if (content === "default") {
