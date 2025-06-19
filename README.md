@@ -4,7 +4,7 @@
 Before forwarding, Monsta **enriches each alert** by checking the IP against external threat intelligence sources such as **AbuseIPDB** and **ThreatFox**, helping analysts **prioritize alerts** based on reputation and context. This project automates various security checks and alerting functions using tools and APIs integrated into the bot.
 
 ## 🪄 Preview
-| ![Help Command](https://i.imgur.com/jpBI0Wk.jpeg) | ![Server Status](https://i.imgur.com/IBuxTil.jpeg) | ![Account Monitoring](https://i.imgur.com/MwWVZop.jpeg) 
+| ![Help Command](https://i.imgur.com/TbFTzpT.jpeg) | ![Server Status](https://i.imgur.com/IBuxTil.jpeg) | ![Account Monitoring](https://i.imgur.com/MwWVZop.jpeg) 
 |:--:|:--:|:--:|
 | Help Command | Server Monitoring | Account Monitoring |
 
